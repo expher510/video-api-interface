@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "ApiKey": {
+      "title": "API Key",
+      "description": "Represents an API key for external applications.",
+      "type": "object",
+      "properties": {
+        "user_id": { "$ref": "#/entities/UserId" },
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "project": { "type": "string" },
+        "permissions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "daily_limit": { "type": "number" },
+        "requests_today": { "type": "number" },
+        "limit_reset_at": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "revoked"] },
+        "created_at": { "type": "number" }
+      },
+      "required": ["user_id", "key", "name", "project", "permissions", "daily_limit", "requests_today", "limit_reset_at", "status", "created_at"]
+    },
+    "UserId": {
+      "title": "User UID",
+      "description": "The UID of the user who owns this document.",
+      "type": "string"
+    }
+  },
+  "firestore": {
+    "/api_keys/{apiKeyId}": {
+      "schema": { "$ref": "#/entities/ApiKey" },
+      "description": "Stores user API keys. Access is strictly isolated by user_id."
+    }
+  }
+}

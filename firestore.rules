@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    function isValidApiKey(data) {
+      return data.size() == 10 &&
+             data.keys().hasAll(['user_id', 'key', 'name', 'project', 'permissions', 'daily_limit', 'requests_today', 'limit_reset_at', 'status', 'created_at']) &&
+             data.user_id is string && data.user_id == request.auth.uid &&
+             data.key is string && data.key.size() <= 256 &&
+             data.name is string && data.name.size() <= 64 &&
+             data.project is string && data.project.size() <= 64 &&
+             data.permissions is list && data.permissions.size() <= 10 && (data.permissions.size() == 0 || data.permissions[0] is string) &&
+             data.daily_limit is number &&
+             data.requests_today is number &&
+             data.limit_reset_at is number &&
+             data.status is string && data.status in ['active', 'revoked'] &&
+             data.created_at is number;
+    }
+
+    match /api_keys/{apiKeyId} {
+      allow read: if isSignedIn() && existing().user_id == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidApiKey(incoming());
+
+      allow update: if isSignedIn() &&
+                    existing().user_id == request.auth.uid &&
+                    incoming().user_id == existing().user_id &&
+                    incoming().key == existing().key &&
+                    incoming().created_at == existing().created_at &&
+                    isValidApiKey(incoming()) && (
+                      incoming().diff(existing()).affectedKeys().hasOnly(['status']) ||
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'project', 'permissions', 'daily_limit']) ||
+                      incoming().diff(existing()).affectedKeys().hasOnly(['requests_today', 'limit_reset_at']) ||
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'project', 'permissions', 'daily_limit', 'status'])
+                    );
+
+      allow delete: if isSignedIn() && existing().user_id == request.auth.uid;
+    }
+  }
+}
