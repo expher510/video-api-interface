@@ -41,7 +41,8 @@ export const getServerEnv = (): ServerEnv => ({
   receivedVideoSecret: read('RECEIVED_VIDEO_SECRET'),
   receivedVideoAllowedIp: read('RECEIVED_VIDEO_ALLOWED_IP'),
   pollBaseUrl: read('PUBLIC_API_BASE_URL'),
-  mediaSigningSecret: read('MEDIA_SIGNING_SECRET') || read('ADMIN_API_TOKEN'),
+  mediaSigningSecret:
+    read('MEDIA_SIGNING_SECRET') || read('ADMIN_API_TOKEN') || read('REDIS_REST_TOKEN') || read('UPSTASH_REDIS_REST_TOKEN'),
   mediaSignedUrlTtlSeconds: readInt('MEDIA_SIGNED_URL_TTL_SECONDS', 1800),
 });
 
