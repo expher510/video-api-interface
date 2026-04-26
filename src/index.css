@@ -451,7 +451,7 @@ body {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 0.8rem;
 }
 
@@ -623,6 +623,22 @@ th {
 
 .row-revoked {
   opacity: 0.75;
+}
+
+.usage-cell {
+  text-align: center;
+}
+
+.usage-main {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.usage-sub {
+  margin: 0.22rem 0 0;
+  color: var(--text-soft);
+  font-size: 0.74rem;
 }
 
 .row-actions,

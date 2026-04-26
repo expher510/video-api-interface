@@ -310,6 +310,11 @@ function KeysView({ user }: { user: User }) {
       total: keys.length,
       active: keys.filter((item) => item.status === 'active').length,
       revoked: keys.filter((item) => item.status === 'revoked').length,
+      requestsToday: keys.reduce((sum, item) => sum + Math.max(0, item.requests_today), 0),
+      remainingToday: keys.reduce((sum, item) => {
+        if (item.daily_limit <= 0) return sum;
+        return sum + Math.max(0, item.daily_limit - item.requests_today);
+      }, 0),
     }),
     [keys],
   );
@@ -349,6 +354,8 @@ function KeysView({ user }: { user: User }) {
         <div className="stats-grid">
           <StatCard label="Total Keys" value={stats.total} />
           <StatCard label="Active Keys" value={stats.active} />
+          <StatCard label="Requests Today" value={stats.requestsToday} />
+          <StatCard label="Remaining Today" value={stats.remainingToday} />
           <StatCard label="Revoked" value={stats.revoked} danger />
         </div>
 
@@ -370,6 +377,7 @@ function KeysView({ user }: { user: User }) {
                   <th>Name & Project</th>
                   <th>Key</th>
                   <th className="text-center">Status</th>
+                  <th className="text-center">Usage Today</th>
                   <th>Created</th>
                   <th className="text-right">Actions</th>
                 </tr>
@@ -380,7 +388,7 @@ function KeysView({ user }: { user: User }) {
                 ))}
                 {keys.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="empty-row">
+                    <td colSpan={6} className="empty-row">
                       <Fingerprint className="w-8 h-8" />
                       <p>No API keys yet. Create one to get started.</p>
                     </td>
@@ -554,6 +562,7 @@ function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
 
   const isRevoked = item.status === 'revoked';
   const usagePercent = item.daily_limit > 0 ? Math.min(100, (item.requests_today / item.daily_limit) * 100) : 0;
+  const remainingToday = item.daily_limit > 0 ? Math.max(0, item.daily_limit - item.requests_today) : 0;
 
   return (
     <tr className={isRevoked ? 'row-revoked' : ''}>
@@ -582,6 +591,12 @@ function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
             <div style={{ width: `${usagePercent}%` }} />
           </div>
         )}
+      </td>
+      <td className="usage-cell">
+        <p className="usage-main">
+          {Math.max(0, item.requests_today)} / {Math.max(0, item.daily_limit)}
+        </p>
+        <p className="usage-sub">{remainingToday} remaining</p>
       </td>
       <td>{safeDate(item.created_at)}</td>
       <td>
