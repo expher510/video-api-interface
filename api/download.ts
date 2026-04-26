@@ -24,6 +24,24 @@ type StoredJobStatus = {
   timestamp?: string;
 };
 
+const inferBaseUrl = (req: RequestLike, configuredBaseUrl: string) => {
+  if (configuredBaseUrl) return configuredBaseUrl.replace(/\/+$/, '');
+
+  const host = getHeader(req, 'x-forwarded-host') || getHeader(req, 'host');
+  const proto = getHeader(req, 'x-forwarded-proto') || 'https';
+  return host ? `${proto}://${host}` : '';
+};
+
+const buildProxyAssetUrl = (baseUrl: string, jobId: string, type: 'video' | 'image', index: number) => {
+  const query = new URLSearchParams({
+    job_id: jobId,
+    type,
+    index: String(index),
+  }).toString();
+
+  return `${baseUrl || ''}/api/media?${query}`;
+};
+
 const extractJobId = (req: RequestLike) => {
   const body = parseJsonBody<DownloadBody>(req);
   const fromBody = String(body.job_id ?? '').trim();
@@ -79,6 +97,7 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
 
     const env = getServerEnv();
     assertEnvFields(env, ['firebaseProjectId', 'firebaseClientEmail', 'firebasePrivateKey', 'redisRestUrl', 'redisRestToken']);
+    const baseUrl = inferBaseUrl(req, env.pollBaseUrl);
 
     await validateAndConsumeApiKey(env, apiKey);
 
@@ -101,6 +120,14 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       const images = stored.images ?? [];
       const text = stored.text ?? '';
       const count = videos.length + images.length + (text ? 1 : 0);
+      const proxiedVideos = videos.map((item) => ({
+        index: item.index,
+        url: buildProxyAssetUrl(baseUrl, jobId, 'video', item.index),
+      }));
+      const proxiedImages = images.map((item) => ({
+        index: item.index,
+        url: buildProxyAssetUrl(baseUrl, jobId, 'image', item.index),
+      }));
 
       sendJson(res, 200, {
         success: true,
@@ -109,8 +136,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
         job_id: jobId,
         message: stored.message ?? 'Generation completed successfully.',
         count,
-        videos,
-        images,
+        videos: proxiedVideos,
+        images: proxiedImages,
         text: text || undefined,
         timestamp: stored.timestamp ?? new Date().toISOString(),
       });

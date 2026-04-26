@@ -43,7 +43,11 @@ const getClient = (env: ServerEnv) => {
   return firestoreClient;
 };
 
-export const validateAndConsumeApiKey = async (env: ServerEnv, apiKey: string): Promise<KeyValidationResult> => {
+const validateApiKeyInternal = async (
+  env: ServerEnv,
+  apiKey: string,
+  consumeRequest: boolean,
+): Promise<KeyValidationResult> => {
   const db = getClient(env);
   const querySnapshot = await db.collection('api_keys').where('key', '==', apiKey).limit(1).get();
 
@@ -90,11 +94,13 @@ export const validateAndConsumeApiKey = async (env: ServerEnv, apiKey: string): 
       throw new ApiError(429, 'daily_limit_exceeded', `Daily request limit of ${currentLimit} has been reached.`);
     }
 
-    transaction.update(docRef, {
-      requests_today: FieldValue.increment(1),
-    });
+    if (consumeRequest) {
+      transaction.update(docRef, {
+        requests_today: FieldValue.increment(1),
+      });
+    }
 
-    const remaining = currentLimit > 0 ? Math.max(0, currentLimit - (requestsToday + 1)) : -1;
+    const remaining = currentLimit > 0 ? Math.max(0, currentLimit - (requestsToday + (consumeRequest ? 1 : 0))) : -1;
 
     return {
       userId: String(data.user_id ?? ''),
@@ -107,3 +113,9 @@ export const validateAndConsumeApiKey = async (env: ServerEnv, apiKey: string): 
 
   return result;
 };
+
+export const validateAndConsumeApiKey = async (env: ServerEnv, apiKey: string): Promise<KeyValidationResult> =>
+  validateApiKeyInternal(env, apiKey, true);
+
+export const validateApiKey = async (env: ServerEnv, apiKey: string): Promise<KeyValidationResult> =>
+  validateApiKeyInternal(env, apiKey, false);

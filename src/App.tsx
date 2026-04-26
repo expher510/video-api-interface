@@ -732,7 +732,7 @@ function DocsView() {
             <ShieldCheck className="w-4 h-4" />
             POST /api/download
           </h4>
-          <p>Poll by job ID until state becomes completed or failed.</p>
+          <p>Poll by job ID until state becomes completed or failed. Completed responses include EG Autonomous proxy media URLs.</p>
 
           <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/download \\
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
@@ -740,6 +740,15 @@ function DocsView() {
   -d '{
     "job_id": "268c2294-98c9-44ab-9482-3915a03f794b"
   }'`}</pre>
+
+          <h4>
+            <ShieldCheck className="w-4 h-4" />
+            GET /api/media
+          </h4>
+          <p>Secure media proxy endpoint. Use the URL returned by <code>/api/download</code> with the same Bearer token.</p>
+
+          <pre>{`curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1" \\
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx"`}</pre>
 
           <h4>
             <ShieldCheck className="w-4 h-4" />

@@ -14,6 +14,7 @@ A production-ready React + Vercel project for:
 - Server API (Vercel Functions):
   - `POST /api/generate`
   - `POST /api/download` (also supports `GET`)
+  - `GET /api/media` (secure proxy for generated media)
   - `POST /api/set-cookies`
   - `POST /api/received-video`
 - Persistence:
@@ -73,7 +74,16 @@ curl -X POST https://eg-autonomous.vercel.app/api/download \
   -d '{"job_id":"<job-id-from-generate>"}'
 ```
 
-### 3) Upload Meta cookies (admin only)
+`/api/download` returns EG Autonomous proxy URLs only (no direct Meta CDN links).
+
+### 3) Access proxied media URL
+
+```bash
+curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1" \
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx"
+```
+
+### 4) Upload Meta cookies (admin only)
 
 ```bash
 curl -X POST https://eg-autonomous.vercel.app/api/set-cookies \

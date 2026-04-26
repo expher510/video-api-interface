@@ -1,7 +1,8 @@
-﻿import generateHandler from '../api/generate';
+import generateHandler from '../api/generate';
 import downloadHandler from '../api/download';
 import setCookiesHandler from '../api/set-cookies';
 import receivedVideoHandler from '../api/received-video';
+import mediaHandler from '../api/media';
 
 type Req = {
   method?: string;
@@ -70,6 +71,15 @@ const main = async () => {
 
   results.push(
     await runCase('received-video wrong method', receivedVideoHandler, { method: 'GET', headers: {} }, 405),
+  );
+
+  results.push(
+    await runCase(
+      'media without API key',
+      mediaHandler,
+      { method: 'GET', headers: {}, query: { job_id: 'job_123', type: 'video', index: '1' } },
+      401,
+    ),
   );
 
   console.log(JSON.stringify({ success: true, results }, null, 2));
