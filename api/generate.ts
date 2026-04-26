@@ -65,11 +65,13 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     }
 
     const jobId = buildJobId();
+    const workerPrompt = `Generate a video about: ${prompt}`;
     const baseUrl = env.pollBaseUrl || inferBaseUrl(req);
     const webhookUrl = baseUrl ? `${baseUrl}/api/received-video` : '/api/received-video';
 
     await dispatchGithubWorkflow(env.githubRepo, env.githubToken, env.githubEventType, {
-      prompt,
+      prompt: workerPrompt,
+      original_prompt: prompt,
       webhook_url: webhookUrl,
       job_id: jobId,
       cookies_b64: cookiesB64,
