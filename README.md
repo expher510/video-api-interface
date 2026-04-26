@@ -54,6 +54,13 @@ curl -X POST https://eg-autonomous.vercel.app/api/generate \
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
+  -d '{"prompt":"Create a futuristic city poster for EG Autonomous.","mode":"image"}'
+```
+
+```bash
+curl -X POST https://eg-autonomous.vercel.app/api/generate \
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
   -d '{"prompt":"Animate this brand image","mode":"image_to_video","image_url":"https://example.com/image.jpg"}'
 ```
 
