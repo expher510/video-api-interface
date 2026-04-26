@@ -12,9 +12,12 @@ type DownloadBody = {
 type StoredJobStatus = {
   success: boolean;
   state: 'queued' | 'processing' | 'completed' | 'failed';
+  mode?: 'text' | 'image' | 'video' | 'image_to_video';
   job_id: string;
   message?: string;
   videos?: Array<{ index: number; url: string }>;
+  images?: Array<{ index: number; url: string }>;
+  text?: string;
   error?: {
     reason: string;
   };
@@ -94,13 +97,21 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     }
 
     if (stored.state === 'completed') {
+      const videos = stored.videos ?? [];
+      const images = stored.images ?? [];
+      const text = stored.text ?? '';
+      const count = videos.length + images.length + (text ? 1 : 0);
+
       sendJson(res, 200, {
         success: true,
         state: 'completed',
+        mode: stored.mode ?? (images.length > 0 ? 'image' : text ? 'text' : 'video'),
         job_id: jobId,
-        message: stored.message ?? 'Video generated successfully.',
-        count: stored.videos?.length ?? 0,
-        videos: stored.videos ?? [],
+        message: stored.message ?? 'Generation completed successfully.',
+        count,
+        videos,
+        images,
+        text: text || undefined,
         timestamp: stored.timestamp ?? new Date().toISOString(),
       });
       return;
@@ -110,8 +121,9 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       sendJson(res, 200, {
         success: false,
         state: 'failed',
+        mode: stored.mode ?? 'video',
         job_id: jobId,
-        message: stored.message ?? 'Video generation failed.',
+        message: stored.message ?? 'Generation failed.',
         error: stored.error ?? { reason: 'Unknown error' },
         timestamp: stored.timestamp ?? new Date().toISOString(),
       });
