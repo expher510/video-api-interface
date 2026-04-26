@@ -1,7 +1,8 @@
-﻿import { extractBearerToken } from './_lib/auth.js';
+import { extractBearerToken } from './_lib/auth.js';
 import { ApiError } from './_lib/errors.js';
 import { assertEnvFields, getServerEnv } from './_lib/env.js';
 import { validateAndConsumeApiKey } from './_lib/firestore.js';
+import { createMediaSignature } from './_lib/media-signing.js';
 import { getRedisValue } from './_lib/redis.js';
 import { getHeader, parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
 
@@ -32,11 +33,27 @@ const inferBaseUrl = (req: RequestLike, configuredBaseUrl: string) => {
   return host ? `${proto}://${host}` : '';
 };
 
-const buildProxyAssetUrl = (baseUrl: string, jobId: string, type: 'video' | 'image', index: number) => {
+const buildProxyAssetUrl = (
+  baseUrl: string,
+  jobId: string,
+  type: 'video' | 'image',
+  index: number,
+  signingSecret: string,
+  expiresAt: number,
+) => {
+  const signature = createMediaSignature(signingSecret, {
+    jobId,
+    type,
+    index,
+    expiresAt,
+  });
+
   const query = new URLSearchParams({
     job_id: jobId,
     type,
     index: String(index),
+    exp: String(expiresAt),
+    sig: signature,
   }).toString();
 
   return `${baseUrl || ''}/api/media?${query}`;
@@ -96,7 +113,14 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     }
 
     const env = getServerEnv();
-    assertEnvFields(env, ['firebaseProjectId', 'firebaseClientEmail', 'firebasePrivateKey', 'redisRestUrl', 'redisRestToken']);
+    assertEnvFields(env, [
+      'firebaseProjectId',
+      'firebaseClientEmail',
+      'firebasePrivateKey',
+      'redisRestUrl',
+      'redisRestToken',
+      'mediaSigningSecret',
+    ]);
     const baseUrl = inferBaseUrl(req, env.pollBaseUrl);
 
     await validateAndConsumeApiKey(env, apiKey);
@@ -120,13 +144,15 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       const images = stored.images ?? [];
       const text = stored.text ?? '';
       const count = videos.length + images.length + (text ? 1 : 0);
+      const ttlSeconds = Math.min(Math.max(env.mediaSignedUrlTtlSeconds, 60), 60 * 60 * 24);
+      const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
       const proxiedVideos = videos.map((item) => ({
         index: item.index,
-        url: buildProxyAssetUrl(baseUrl, jobId, 'video', item.index),
+        url: buildProxyAssetUrl(baseUrl, jobId, 'video', item.index, env.mediaSigningSecret, expiresAt),
       }));
       const proxiedImages = images.map((item) => ({
         index: item.index,
-        url: buildProxyAssetUrl(baseUrl, jobId, 'image', item.index),
+        url: buildProxyAssetUrl(baseUrl, jobId, 'image', item.index, env.mediaSigningSecret, expiresAt),
       }));
 
       sendJson(res, 200, {
@@ -139,6 +165,7 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
         videos: proxiedVideos,
         images: proxiedImages,
         text: text || undefined,
+        media_url_expires_at: new Date(expiresAt * 1000).toISOString(),
         timestamp: stored.timestamp ?? new Date().toISOString(),
       });
       return;

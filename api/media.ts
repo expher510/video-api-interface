@@ -4,6 +4,7 @@ import { extractBearerToken } from './_lib/auth.js';
 import { ApiError } from './_lib/errors.js';
 import { assertEnvFields, getServerEnv } from './_lib/env.js';
 import { validateApiKey } from './_lib/firestore.js';
+import { verifyMediaSignature } from './_lib/media-signing.js';
 import { getRedisValue } from './_lib/redis.js';
 import { RequestLike, ResponseLike, getHeader, withErrorHandling } from './_lib/http.js';
 
@@ -87,11 +88,6 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       throw new ApiError(405, 'method_not_allowed', `Method ${req.method ?? 'unknown'} is not allowed.`);
     }
 
-    const apiKey = extractBearerToken(req);
-    if (!apiKey) {
-      throw new ApiError(401, 'missing_api_key', 'Missing API key. Use Authorization: Bearer eg_xxx');
-    }
-
     const jobId = getQueryParam(req, 'job_id');
     if (!jobId) {
       throw new ApiError(400, 'missing_job_id', 'job_id is required.');
@@ -105,9 +101,47 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       throw new ApiError(400, 'invalid_index', 'index must be a positive integer.');
     }
 
+    const apiKey = extractBearerToken(req);
+    const expRaw = getQueryParam(req, 'exp');
+    const sigRaw = getQueryParam(req, 'sig');
+
     const env = getServerEnv();
-    assertEnvFields(env, ['firebaseProjectId', 'firebaseClientEmail', 'firebasePrivateKey', 'redisRestUrl', 'redisRestToken']);
-    await validateApiKey(env, apiKey);
+    assertEnvFields(env, ['redisRestUrl', 'redisRestToken']);
+
+    let signedAuthorized = false;
+    if (expRaw || sigRaw) {
+      if (!env.mediaSigningSecret) {
+        if (!apiKey) {
+          throw new ApiError(500, 'misconfigured_server', 'MEDIA_SIGNING_SECRET is required for signed media URLs.');
+        }
+      } else {
+        const expiresAt = Number.parseInt(expRaw, 10);
+        const now = Math.floor(Date.now() / 1000);
+        const hasValidExpiry = Number.isFinite(expiresAt) && expiresAt > now;
+
+        if (hasValidExpiry && sigRaw) {
+          signedAuthorized = verifyMediaSignature(env.mediaSigningSecret, {
+            jobId,
+            type: assetType,
+            index,
+            expiresAt,
+          }, sigRaw);
+        }
+
+        if (!signedAuthorized && !apiKey) {
+          throw new ApiError(401, 'invalid_media_signature', 'Invalid or expired signed media URL.');
+        }
+      }
+    }
+
+    if (!signedAuthorized) {
+      if (!apiKey) {
+        throw new ApiError(401, 'missing_media_auth', 'Missing authorization. Provide Bearer token or signed URL.');
+      }
+
+      assertEnvFields(env, ['firebaseProjectId', 'firebaseClientEmail', 'firebasePrivateKey']);
+      await validateApiKey(env, apiKey);
+    }
 
     const storedRaw = await getRedisValue(env.redisRestUrl, env.redisRestToken, `job:${jobId}`);
     const stored = toStoredStatus(storedRaw);

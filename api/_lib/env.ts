@@ -14,9 +14,18 @@ export type ServerEnv = {
   receivedVideoSecret: string;
   receivedVideoAllowedIp: string;
   pollBaseUrl: string;
+  mediaSigningSecret: string;
+  mediaSignedUrlTtlSeconds: number;
 };
 
 const read = (name: string, fallback = '') => (process.env[name] ?? fallback).trim();
+const readInt = (name: string, fallback: number) => {
+  const raw = read(name);
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+};
 
 export const getServerEnv = (): ServerEnv => ({
   firebaseProjectId: read('FIREBASE_PROJECT_ID'),
@@ -32,6 +41,8 @@ export const getServerEnv = (): ServerEnv => ({
   receivedVideoSecret: read('RECEIVED_VIDEO_SECRET'),
   receivedVideoAllowedIp: read('RECEIVED_VIDEO_ALLOWED_IP'),
   pollBaseUrl: read('PUBLIC_API_BASE_URL'),
+  mediaSigningSecret: read('MEDIA_SIGNING_SECRET') || read('ADMIN_API_TOKEN'),
+  mediaSignedUrlTtlSeconds: readInt('MEDIA_SIGNED_URL_TTL_SECONDS', 1800),
 });
 
 export const assertEnvFields = (env: ServerEnv, keys: Array<keyof ServerEnv>) => {

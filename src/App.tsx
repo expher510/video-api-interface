@@ -745,10 +745,9 @@ function DocsView() {
             <ShieldCheck className="w-4 h-4" />
             GET /api/media
           </h4>
-          <p>Secure media proxy endpoint. Use the URL returned by <code>/api/download</code> with the same Bearer token.</p>
+          <p>Secure media proxy endpoint. Use the signed URL returned by <code>/api/download</code> directly (no extra token header).</p>
 
-          <pre>{`curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1" \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx"`}</pre>
+          <pre>{`curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1&exp=<unix-seconds>&sig=<signature>"`}</pre>
 
           <h4>
             <ShieldCheck className="w-4 h-4" />

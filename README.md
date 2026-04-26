@@ -79,9 +79,10 @@ curl -X POST https://eg-autonomous.vercel.app/api/download \
 ### 3) Access proxied media URL
 
 ```bash
-curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1" \
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx"
+curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1&exp=<unix-seconds>&sig=<signature>"
 ```
+
+Signed media URLs are returned by `/api/download` and can be used directly without Authorization headers until they expire.
 
 ### 4) Upload Meta cookies (admin only)
 
