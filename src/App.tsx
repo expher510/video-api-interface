@@ -681,7 +681,7 @@ function DocsView() {
           </h4>
           <p>Queue a video generation task. The endpoint returns a job ID and polling instructions.</p>
 
-          <pre>{`curl -X POST https://your-domain.vercel.app/api/generate \\
+          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -694,7 +694,7 @@ function DocsView() {
           </h4>
           <p>Poll by job ID until state becomes completed or failed.</p>
 
-          <pre>{`curl -X POST https://your-domain.vercel.app/api/download \\
+          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/download \\
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{

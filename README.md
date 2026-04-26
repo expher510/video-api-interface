@@ -44,7 +44,7 @@ Required variables are fully documented in `.env.example`.
 ### 1) Generate a video
 
 ```bash
-curl -X POST https://your-domain.vercel.app/api/generate \
+curl -X POST https://eg-autonomous.vercel.app/api/generate \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"prompt":"Create a premium product launch cinematic."}'
@@ -53,7 +53,7 @@ curl -X POST https://your-domain.vercel.app/api/generate \
 ### 2) Poll status / get result
 
 ```bash
-curl -X POST https://your-domain.vercel.app/api/download \
+curl -X POST https://eg-autonomous.vercel.app/api/download \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{"job_id":"<job-id-from-generate>"}'
@@ -62,7 +62,7 @@ curl -X POST https://your-domain.vercel.app/api/download \
 ### 3) Upload Meta cookies (admin only)
 
 ```bash
-curl -X POST https://your-domain.vercel.app/api/set-cookies \
+curl -X POST https://eg-autonomous.vercel.app/api/set-cookies \
   -H "x-admin-token: <ADMIN_API_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"cookies_txt":"<netscape-cookies-text>"}'
