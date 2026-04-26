@@ -5,10 +5,21 @@ export const extractBearerToken = (req: RequestLike) => {
   const rawAuthorization = getHeader(req, 'authorization');
   if (!rawAuthorization) return '';
 
-  const [scheme, token] = rawAuthorization.split(' ');
-  if (!scheme || !token) return '';
-  if (!/^Bearer$/i.test(scheme)) return '';
-  return token.trim();
+  const trimmed = rawAuthorization.trim();
+  if (!trimmed) return '';
+
+  // Support both formats:
+  // 1) Authorization: Bearer eg_xxx
+  // 2) Authorization: eg_xxx
+  if (/^Bearer\s+/i.test(trimmed)) {
+    return trimmed.replace(/^Bearer\s+/i, '').trim();
+  }
+
+  if (/^(eg|vg)_[A-Za-z0-9]+$/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return '';
 };
 
 export const assertAdminToken = (req: RequestLike, expectedToken: string) => {

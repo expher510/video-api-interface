@@ -34,7 +34,11 @@ export const requireMethod = (req: RequestLike, expected: string) => {
 export const parseJsonBody = <T>(req: RequestLike): T => {
   if (!req.body) return {} as T;
   if (typeof req.body === 'string') {
-    return JSON.parse(req.body) as T;
+    try {
+      return JSON.parse(req.body) as T;
+    } catch {
+      throw new ApiError(400, 'invalid_json', 'Request body is not valid JSON.');
+    }
   }
   return req.body as T;
 };
@@ -52,10 +56,30 @@ export const withErrorHandling = async (res: ResponseLike, action: () => Promise
       return;
     }
 
+    if (error instanceof Error) {
+      if (error.message.includes('Missing environment variables:')) {
+        sendJson(res, 500, {
+          success: false,
+          code: 'misconfigured_server',
+          message: error.message,
+        });
+        return;
+      }
+
+      if (error.message.includes('permission-denied')) {
+        sendJson(res, 500, {
+          success: false,
+          code: 'firebase_permission_denied',
+          message: 'Server could not access Firestore. Check Firebase service account permissions.',
+        });
+        return;
+      }
+    }
+
     sendJson(res, 500, {
       success: false,
       code: 'internal_error',
-      message: 'Unexpected server error.',
+      message: error instanceof Error ? error.message : 'Unexpected server error.',
     });
   }
 };
