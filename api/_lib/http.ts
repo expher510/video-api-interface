@@ -1,4 +1,4 @@
-﻿import { ApiError, isApiError } from './errors';
+﻿import { ApiError, isApiError } from './errors.js';
 
 export type RequestLike = {
   method?: string;

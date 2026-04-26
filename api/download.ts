@@ -1,9 +1,9 @@
-﻿import { extractBearerToken } from './_lib/auth';
-import { ApiError } from './_lib/errors';
-import { assertEnvFields, getServerEnv } from './_lib/env';
-import { validateAndConsumeApiKey } from './_lib/firestore';
-import { getRedisValue } from './_lib/redis';
-import { getHeader, parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http';
+﻿import { extractBearerToken } from './_lib/auth.js';
+import { ApiError } from './_lib/errors.js';
+import { assertEnvFields, getServerEnv } from './_lib/env.js';
+import { validateAndConsumeApiKey } from './_lib/firestore.js';
+import { getRedisValue } from './_lib/redis.js';
+import { getHeader, parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
 
 type DownloadBody = {
   job_id?: string;

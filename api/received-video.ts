@@ -1,8 +1,8 @@
-﻿import { assertAllowedIp, assertWebhookSecret } from './_lib/auth';
-import { ApiError } from './_lib/errors';
-import { assertEnvFields, getServerEnv } from './_lib/env';
-import { parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http';
-import { setRedisValue } from './_lib/redis';
+﻿import { assertAllowedIp, assertWebhookSecret } from './_lib/auth.js';
+import { ApiError } from './_lib/errors.js';
+import { assertEnvFields, getServerEnv } from './_lib/env.js';
+import { parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
+import { setRedisValue } from './_lib/redis.js';
 
 type ReceivedVideoBody = {
   job_id?: string;

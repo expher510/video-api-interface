@@ -1,5 +1,5 @@
-﻿import { ApiError } from './errors';
-import { RequestLike, getHeader } from './http';
+﻿import { ApiError } from './errors.js';
+import { RequestLike, getHeader } from './http.js';
 
 export const extractBearerToken = (req: RequestLike) => {
   const rawAuthorization = getHeader(req, 'authorization');

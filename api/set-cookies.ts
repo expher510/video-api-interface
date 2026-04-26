@@ -1,9 +1,9 @@
-﻿import { assertAdminToken } from './_lib/auth';
-import { parseMetaCookiesTxt, toBase64 } from './_lib/cookies';
-import { ApiError } from './_lib/errors';
-import { assertEnvFields, getServerEnv } from './_lib/env';
-import { parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http';
-import { setRedisValue } from './_lib/redis';
+﻿import { assertAdminToken } from './_lib/auth.js';
+import { parseMetaCookiesTxt, toBase64 } from './_lib/cookies.js';
+import { ApiError } from './_lib/errors.js';
+import { assertEnvFields, getServerEnv } from './_lib/env.js';
+import { parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
+import { setRedisValue } from './_lib/redis.js';
 
 type SetCookiesBody = {
   cookies_txt?: string;

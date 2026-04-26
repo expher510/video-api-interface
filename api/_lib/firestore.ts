@@ -1,7 +1,7 @@
 ﻿import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { FieldValue, Firestore, getFirestore } from 'firebase-admin/firestore';
-import { ApiError } from './errors';
-import { ServerEnv } from './env';
+import { ApiError } from './errors.js';
+import { ServerEnv } from './env.js';
 
 export type KeyValidationResult = {
   userId: string;

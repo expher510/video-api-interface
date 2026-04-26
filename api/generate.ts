@@ -1,11 +1,11 @@
 ﻿import { randomUUID } from 'node:crypto';
-import { extractBearerToken } from './_lib/auth';
-import { ApiError } from './_lib/errors';
-import { getServerEnv, assertEnvFields } from './_lib/env';
-import { validateAndConsumeApiKey } from './_lib/firestore';
-import { dispatchGithubWorkflow } from './_lib/github';
-import { parseJsonBody, requireMethod, sendJson, withErrorHandling, RequestLike, ResponseLike, getHeader } from './_lib/http';
-import { getRedisValue, setRedisValue } from './_lib/redis';
+import { extractBearerToken } from './_lib/auth.js';
+import { ApiError } from './_lib/errors.js';
+import { getServerEnv, assertEnvFields } from './_lib/env.js';
+import { validateAndConsumeApiKey } from './_lib/firestore.js';
+import { dispatchGithubWorkflow } from './_lib/github.js';
+import { parseJsonBody, requireMethod, sendJson, withErrorHandling, RequestLike, ResponseLike, getHeader } from './_lib/http.js';
+import { getRedisValue, setRedisValue } from './_lib/redis.js';
 
 type GenerateBody = {
   prompt?: string;
