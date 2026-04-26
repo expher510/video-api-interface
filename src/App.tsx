@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 
 type AuthMode = 'login' | 'register';
 type ApiKeyStatus = 'active' | 'revoked';
+type GenerateMode = 'text' | 'image' | 'video' | 'image_to_video';
 
 type ApiKeyDoc = {
   id: string;
@@ -630,6 +631,8 @@ function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
 function DocsView() {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
+  const [mode, setMode] = useState<GenerateMode>('video');
+  const [imageUrl, setImageUrl] = useState('');
   const [jobId, setJobId] = useState('');
   const [output, setOutput] = useState('Run a request to preview API responses here.');
   const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
@@ -643,7 +646,11 @@ function DocsView() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey.trim()}`,
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          mode,
+          ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
+        }),
       });
 
       const data = await response.json();
@@ -694,13 +701,23 @@ function DocsView() {
             <ShieldCheck className="w-4 h-4" />
             POST /api/generate
           </h4>
-          <p>Queue a video generation task. The endpoint returns a job ID and polling instructions.</p>
+          <p>Queue generation task with mode support: text, image, video, image_to_video.</p>
 
           <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "prompt": "Create a cinematic launch video for EG Autonomous"
+    "prompt": "Create a cinematic launch video for EG Autonomous",
+    "mode": "video"
+  }'`}</pre>
+
+          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Animate this image",
+    "mode": "image_to_video",
+    "image_url": "https://example.com/image.jpg"
   }'`}</pre>
 
           <h4>
@@ -753,6 +770,26 @@ function DocsView() {
               />
             </div>
             <div>
+              <label>Mode</label>
+              <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
+                <option value="video">video</option>
+                <option value="image">image</option>
+                <option value="text">text</option>
+                <option value="image_to_video">image_to_video</option>
+              </select>
+            </div>
+            {mode === 'image_to_video' && (
+              <div>
+                <label>Image URL</label>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+            )}
+            <div>
               <label>Job ID</label>
               <input
                 type="text"
@@ -764,7 +801,15 @@ function DocsView() {
           </div>
 
           <div className="playground-actions">
-            <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10 || prompt.trim().length < 3}>
+            <button
+              onClick={runGenerate}
+              disabled={
+                loadingAction !== null ||
+                apiKey.trim().length < 10 ||
+                prompt.trim().length < 3 ||
+                (mode === 'image_to_video' && imageUrl.trim().length < 10)
+              }
+            >
               {loadingAction === 'generate' ? 'Generating...' : 'Test Generate'}
             </button>
             <button

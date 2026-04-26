@@ -728,7 +728,22 @@ th {
   outline: none;
 }
 
+.playground-grid select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(4, 20, 52, 0.85);
+  color: #ffffff;
+  padding: 0.68rem 0.8rem;
+  outline: none;
+}
+
 .playground-grid input:focus {
+  border-color: rgba(60, 178, 255, 0.82);
+  background: rgba(6, 28, 72, 0.95);
+}
+
+.playground-grid select:focus {
   border-color: rgba(60, 178, 255, 0.82);
   background: rgba(6, 28, 72, 0.95);
 }

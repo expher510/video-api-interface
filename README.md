@@ -41,13 +41,20 @@ Required variables are fully documented in `.env.example`.
 
 ## API Usage
 
-### 1) Generate a video
+### 1) Generate content (text, image, video, image_to_video)
 
 ```bash
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Create a premium product launch cinematic."}'
+  -d '{"prompt":"Create a premium product launch cinematic.","mode":"video"}'
+```
+
+```bash
+curl -X POST https://eg-autonomous.vercel.app/api/generate \
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Animate this brand image","mode":"image_to_video","image_url":"https://example.com/image.jpg"}'
 ```
 
 ### 2) Poll status / get result

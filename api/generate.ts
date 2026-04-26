@@ -10,6 +10,8 @@ import { getRedisValue, setRedisValue } from './_lib/redis.js';
 type GenerateBody = {
   prompt?: string;
   body?: string;
+  mode?: 'text' | 'image' | 'video' | 'image_to_video';
+  image_url?: string;
 };
 
 const inferBaseUrl = (req: RequestLike) => {
@@ -26,6 +28,22 @@ const buildJobId = () => {
   }
 };
 
+const resolveMode = (rawMode: unknown) => {
+  const mode = String(rawMode ?? 'video').trim().toLowerCase();
+  const allowedModes = new Set(['text', 'image', 'video', 'image_to_video']);
+  if (!allowedModes.has(mode)) {
+    throw new ApiError(400, 'invalid_mode', 'mode must be one of: text, image, video, image_to_video.');
+  }
+  return mode as 'text' | 'image' | 'video' | 'image_to_video';
+};
+
+const buildWorkerPrompt = (mode: 'text' | 'image' | 'video' | 'image_to_video', prompt: string) => {
+  if (mode === 'text') return `Generate a text response about: ${prompt}`;
+  if (mode === 'image') return `Generate an image about: ${prompt}`;
+  if (mode === 'image_to_video') return `Generate a video animation about: ${prompt}`;
+  return `Generate a video about: ${prompt}`;
+};
+
 export default async function handler(req: RequestLike, res: ResponseLike) {
   await withErrorHandling(res, async () => {
     requireMethod(req, 'POST');
@@ -37,6 +55,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
 
     const requestBody = parseJsonBody<GenerateBody>(req);
     const prompt = String(requestBody.prompt ?? requestBody.body ?? '').trim();
+    const mode = resolveMode(requestBody.mode);
+    const imageUrl = String(requestBody.image_url ?? '').trim();
 
     if (prompt.length < 3) {
       throw new ApiError(400, 'invalid_prompt', 'Prompt must be at least 3 characters.');
@@ -44,6 +64,14 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
 
     if (prompt.length > 3000) {
       throw new ApiError(400, 'invalid_prompt', 'Prompt is too long. Maximum is 3000 characters.');
+    }
+
+    if (mode === 'image_to_video' && !imageUrl) {
+      throw new ApiError(400, 'missing_image_url', 'image_url is required when mode is image_to_video.');
+    }
+
+    if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
+      throw new ApiError(400, 'invalid_image_url', 'image_url must be a valid http/https URL.');
     }
 
     const env = getServerEnv();
@@ -65,13 +93,15 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     }
 
     const jobId = buildJobId();
-    const workerPrompt = `Generate a video about: ${prompt}`;
+    const workerPrompt = buildWorkerPrompt(mode, prompt);
     const baseUrl = env.pollBaseUrl || inferBaseUrl(req);
     const webhookUrl = baseUrl ? `${baseUrl}/api/received-video` : '/api/received-video';
 
     await dispatchGithubWorkflow(env.githubRepo, env.githubToken, env.githubEventType, {
       prompt: workerPrompt,
       original_prompt: prompt,
+      mode,
+      image_url: imageUrl || undefined,
       webhook_url: webhookUrl,
       job_id: jobId,
       cookies_b64: cookiesB64,
@@ -87,8 +117,9 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       JSON.stringify({
         success: true,
         state: 'queued',
+        mode,
         job_id: jobId,
-        message: 'Video generation job has been queued.',
+        message: `${mode.replaceAll('_', ' ')} generation job has been queued.`,
         created_at: new Date().toISOString(),
       }),
       60 * 60 * 24,
@@ -97,8 +128,9 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     sendJson(res, 202, {
       success: true,
       state: 'queued',
+      mode,
       job_id: jobId,
-      message: 'Video generation job has been queued.',
+      message: `${mode.replaceAll('_', ' ')} generation job has been queued.`,
       estimated_time: 120,
       poll_url: `${baseUrl || ''}/api/download`,
       poll_interval: 10,
