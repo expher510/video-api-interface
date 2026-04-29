@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 
 type AuthMode = 'login' | 'register';
 type ApiKeyStatus = 'active' | 'revoked';
-type GenerateMode = 'text' | 'image' | 'video' | 'image_to_video';
+type GenerateMode = 'image' | 'video' | 'image_to_video';
 type AppSection = 'generate' | 'docs' | 'keys';
 
 type ApiKeyDoc = {
@@ -309,8 +309,13 @@ function GenerateStudioView() {
   const [runStatus, setRunStatus] = useState<'idle' | 'queued' | 'processing' | 'completed' | 'failed'>('idle');
   const [runMessage, setRunMessage] = useState('Ready to run generation.');
   const [barDocked, setBarDocked] = useState(false);
+  const [galleryItems, setGalleryItems] = useState<MediaItem[]>([]);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenSourceUrl, setRegenSourceUrl] = useState('');
+  const [regenPrompt, setRegenPrompt] = useState('Create a stronger cinematic variation.');
+  const [activeRegenSourceUrl, setActiveRegenSourceUrl] = useState('');
 
-  const mediaItems = useMemo(() => extractMediaUrls(lastPayload), [lastPayload]);
+  const mediaItems = useMemo(() => galleryItems, [galleryItems]);
   const latestImage = useMemo(() => mediaItems.find((item) => item.kind === 'image')?.url ?? '', [mediaItems]);
 
   const parseState = (payload: unknown): string => {
@@ -365,12 +370,24 @@ function GenerateStudioView() {
         if (hasError) {
           setRunStatus('failed');
           setRunMessage(parseErrorMessage(data) || 'Generation failed. Please inspect the response JSON.');
+          setActiveRegenSourceUrl('');
           return;
         }
 
         if (hasMedia || state.includes('complete') || state.includes('success') || state.includes('done')) {
+          const nextMedia = extractMediaUrls(data);
+          if (nextMedia.length > 0) {
+            setGalleryItems((prev) => {
+              const merged = [...prev];
+              nextMedia.forEach((nextItem) => {
+                if (!merged.some((existing) => existing.url === nextItem.url)) merged.push(nextItem);
+              });
+              return merged;
+            });
+          }
           setRunStatus('completed');
           setRunMessage('Generation completed. All available media items are shown below.');
+          setActiveRegenSourceUrl('');
           return;
         }
 
@@ -379,6 +396,7 @@ function GenerateStudioView() {
       } catch {
         setRunStatus('failed');
         setRunMessage('Auto polling failed while calling /api/download.');
+        setActiveRegenSourceUrl('');
         return;
       }
 
@@ -455,6 +473,60 @@ function GenerateStudioView() {
     }
   };
 
+  const openRegen = (sourceUrl: string) => {
+    setRegenSourceUrl(sourceUrl);
+    setRegenPrompt('Create a stronger cinematic variation.');
+    setRegenOpen(true);
+  };
+
+  const runRegenerate = async () => {
+    if (!regenSourceUrl.trim() || !regenPrompt.trim()) return;
+
+    setRegenOpen(false);
+    setMode('image_to_video');
+    setImageUrl(regenSourceUrl.trim());
+    setPrompt(regenPrompt.trim());
+    setActiveRegenSourceUrl(regenSourceUrl.trim());
+    setBarDocked(true);
+    setLoadingAction('generate');
+    setRunStatus('queued');
+    setRunMessage('Creating a new variant...');
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          prompt: regenPrompt.trim(),
+          mode: 'image_to_video',
+          image_url: regenSourceUrl.trim(),
+        }),
+      });
+
+      const data = await response.json();
+      setLastPayload(data);
+      if (data?.job_id) {
+        const nextJobId = String(data.job_id);
+        setJobId(nextJobId);
+        await pollForResult(nextJobId);
+        return;
+      }
+
+      setRunStatus('failed');
+      setRunMessage('No job ID returned from regenerate request.');
+      setActiveRegenSourceUrl('');
+    } catch {
+      setRunStatus('failed');
+      setRunMessage('Failed to start regenerate request.');
+      setActiveRegenSourceUrl('');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   return (
     <section className="studio-shell">
       <img src={brandImage} alt="Studio background" className="studio-bg" />
@@ -492,7 +564,7 @@ function GenerateStudioView() {
         </div>
 
         <div className="studio-modes">
-          {(['image', 'video', 'text', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
+          {(['image', 'video', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
             <button
               key={itemMode}
               className={mode === itemMode ? 'active' : ''}
@@ -551,22 +623,38 @@ function GenerateStudioView() {
                       Open media URL
                     </a>
                   )}
+                  {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
+                    <div className="card-loading">Regenerating...</div>
+                  )}
+                  <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
+                    Re-generate
+                  </button>
                 </article>
               ))}
             </div>
           )}
         </div>
 
-        <div className="studio-manual">
-          <input value={jobId} readOnly placeholder="Job ID will appear automatically after generate" />
-          <button
-            onClick={runDownload}
-            disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
-            className="secondary"
-          >
-            {loadingAction === 'download' ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
+        {regenOpen && (
+          <div className="regen-modal-backdrop" role="dialog" aria-modal="true">
+            <div className="regen-modal">
+              <h3>Re-generate Variant</h3>
+              <label>Source URL</label>
+              <input value={regenSourceUrl} readOnly />
+              <label>New Prompt</label>
+              <input value={regenPrompt} onChange={(event) => setRegenPrompt(event.target.value)} />
+              <div className="regen-actions">
+                <button type="button" className="secondary" onClick={() => setRegenOpen(false)}>
+                  Cancel
+                </button>
+                <button type="button" onClick={runRegenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
+                  Generate Variant
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </section>
   );
@@ -695,7 +783,6 @@ function DocsPlaygroundCard() {
           <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
             <option value="video">video</option>
             <option value="image">image</option>
-            <option value="text">text</option>
             <option value="image_to_video">image_to_video</option>
           </select>
         </div>
