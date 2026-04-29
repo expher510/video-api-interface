@@ -324,7 +324,7 @@ function GenerateStudioView() {
   const parseErrorMessage = (payload: unknown): string => {
     if (!payload || typeof payload !== 'object') return '';
     const record = payload as Record<string, unknown>;
-    const candidates = [record.message, record.error, record.reason];
+    const candidates = [record.error, record.reason, record.error_message];
     const firstText = candidates.find((item) => typeof item === 'string');
     return typeof firstText === 'string' ? firstText : '';
   };
@@ -351,8 +351,16 @@ function GenerateStudioView() {
         setOutput(JSON.stringify(data, null, 2));
 
         const state = parseState(data);
+        const successValue =
+          typeof data === 'object' && data && 'success' in (data as Record<string, unknown>)
+            ? Boolean((data as Record<string, unknown>).success)
+            : undefined;
         const hasMedia = extractMediaUrls(data).length > 0;
-        const hasError = Boolean(parseErrorMessage(data)) || state.includes('fail') || state.includes('error');
+        const hasError =
+          state.includes('fail') ||
+          state.includes('error') ||
+          successValue === false ||
+          Boolean(parseErrorMessage(data));
 
         if (hasError) {
           setRunStatus('failed');
