@@ -330,12 +330,12 @@ function GenerateStudioView() {
   };
 
   const pollForResult = async (nextJobId: string) => {
-    const maxAttempts = 60;
     const waitMs = 3000;
+    let attempt = 1;
     setRunStatus('queued');
     setRunMessage('Job queued. Waiting for generation result...');
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    while (true) {
       try {
         const response = await fetch('/api/download', {
           method: 'POST',
@@ -367,7 +367,7 @@ function GenerateStudioView() {
         }
 
         setRunStatus('processing');
-        setRunMessage(`Processing... polling attempt ${attempt}/${maxAttempts}`);
+        setRunMessage(`Processing... polling attempt ${attempt}`);
       } catch {
         setRunStatus('failed');
         setRunMessage('Auto polling failed while calling /api/download.');
@@ -375,10 +375,8 @@ function GenerateStudioView() {
       }
 
       await new Promise((resolve) => setTimeout(resolve, waitMs));
+      attempt += 1;
     }
-
-    setRunStatus('failed');
-    setRunMessage('Polling timed out before completion. You can retry with the same job ID.');
   };
 
   const runGenerate = async () => {
@@ -526,7 +524,11 @@ function GenerateStudioView() {
             </div>
           )}
 
-          {runStatus === 'failed' && <pre>{output}</pre>}
+          {runStatus === 'failed' && (
+            <div className="error-stage">
+              <p>{runMessage}</p>
+            </div>
+          )}
 
           {mediaItems.length > 0 && (
             <div className="media-grid">
