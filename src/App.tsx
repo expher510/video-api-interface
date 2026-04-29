@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import brandImage from './assets/eg-autonomous-brand.jpeg';
 import { auth, db } from './firebase';
 import {
@@ -18,22 +18,13 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import {
-  Book,
-  Check,
-  Copy,
-  Eye,
-  EyeOff,
-  Fingerprint,
-  KeyRound,
-  LayoutDashboard,
-  ShieldCheck,
-} from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video } from 'lucide-react';
 import { format } from 'date-fns';
 
 type AuthMode = 'login' | 'register';
 type ApiKeyStatus = 'active' | 'revoked';
 type GenerateMode = 'text' | 'image' | 'video' | 'image_to_video';
+type AppSection = 'generate' | 'docs' | 'keys';
 
 type ApiKeyDoc = {
   id: string;
@@ -47,6 +38,11 @@ type ApiKeyDoc = {
   limit_reset_at: number;
   status: ApiKeyStatus;
   created_at: number;
+};
+
+type MediaItem = {
+  url: string;
+  kind: 'image' | 'video' | 'unknown';
 };
 
 const LIMIT_OPTIONS = [50, 100, 200, 500, 1000, 5000];
@@ -109,7 +105,42 @@ const safeDate = (value: number) => {
   }
 };
 
+const looksLikeUrl = (value: string) => /^https?:\/\//i.test(value);
+
+const detectMediaKind = (url: string): MediaItem['kind'] => {
+  const lower = url.toLowerCase();
+  if (lower.includes('type=video') || /\.(mp4|mov|webm)(\?|$)/.test(lower)) return 'video';
+  if (lower.includes('type=image') || /\.(png|jpg|jpeg|gif|webp)(\?|$)/.test(lower)) return 'image';
+  return 'unknown';
+};
+
+const extractMediaUrls = (payload: unknown): MediaItem[] => {
+  const collected = new Set<string>();
+
+  const walk = (node: unknown) => {
+    if (!node) return;
+    if (typeof node === 'string') {
+      if (looksLikeUrl(node)) collected.add(node);
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach((item) => walk(item));
+      return;
+    }
+
+    if (typeof node === 'object') {
+      Object.values(node as Record<string, unknown>).forEach((item) => walk(item));
+    }
+  };
+
+  walk(payload);
+
+  return Array.from(collected).map((url) => ({ url, kind: detectMediaKind(url) }));
+};
+
 export default function App() {
+  const [section, setSection] = useState<AppSection>('generate');
   const [user, setUser] = useState<User | null>(null);
   const [loadingInit, setLoadingInit] = useState(true);
 
@@ -126,13 +157,54 @@ export default function App() {
       <div className="loading-screen">
         <div className="loading-badge">
           <KeyRound size={28} />
-          <span>Securing Session...</span>
+          <span>Preparing API Playground...</span>
         </div>
       </div>
     );
   }
 
-  return <div className="app-shell">{user ? <Dashboard user={user} /> : <AuthScreen />}</div>;
+  return (
+    <div className="app-shell">
+      <aside className="left-nav">
+        <div className="left-brand">
+          <img src={brandImage} alt="EG Autonomous" />
+          <div>
+            <p>EG Autonomous</p>
+            <span>Video API Platform</span>
+          </div>
+        </div>
+
+        <nav className="left-links">
+          <button className={section === 'generate' ? 'active' : ''} onClick={() => setSection('generate')}>
+            Generate Studio
+          </button>
+          <button className={section === 'docs' ? 'active' : ''} onClick={() => setSection('docs')}>
+            API Docs
+          </button>
+          <button className={section === 'keys' ? 'active' : ''} onClick={() => setSection('keys')}>
+            Key Console
+          </button>
+        </nav>
+
+        <div className="left-auth">
+          {user ? (
+            <>
+              <p>{user.email}</p>
+              <button onClick={() => signOut(auth)}>Log out</button>
+            </>
+          ) : (
+            <button onClick={() => setSection('keys')}>Sign in to manage keys</button>
+          )}
+        </div>
+      </aside>
+
+      <main className="main-stage">
+        {section === 'generate' && <GenerateStudioView />}
+        {section === 'docs' && <ApiDocsView />}
+        {section === 'keys' && (user ? <KeysView user={user} /> : <AuthScreen />)}
+      </main>
+    </div>
+  );
 }
 
 function AuthScreen() {
@@ -176,115 +248,476 @@ function AuthScreen() {
   };
 
   return (
-    <div className="auth-layout">
-      <section className="auth-brand-panel reveal-up">
-        <div className="brand-glow" aria-hidden="true" />
-        <img src={brandImage} alt="EG Autonomous" className="brand-image" />
-        <div className="brand-copy">
-          <p className="brand-kicker">EG AUTONOMOUS</p>
-          <h1>Secure AI Video Key Management</h1>
-          <p>
-            Enterprise-grade key control, usage limits, and fast operational workflows tailored for AI video pipelines.
-          </p>
-        </div>
-      </section>
+    <section className="panel auth-panel">
+      <h2>Key Console Access</h2>
+      <p>Sign in to create and manage secure API keys.</p>
+      {error && <div className="auth-error">{error}</div>}
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@company.com"
+          maxLength={120}
+        />
 
-      <section className="auth-form-panel reveal-up-delay">
-        <div className="auth-card">
-          <div className="auth-title-wrap">
-            <h2>Welcome to EG Autonomous</h2>
-            <p>{isLogin ? 'Sign in to your secure dashboard.' : 'Create your secure account.'}</p>
-          </div>
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          required
+          autoComplete={isLogin ? 'current-password' : 'new-password'}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
+          minLength={isLogin ? 1 : 8}
+          maxLength={128}
+        />
 
-          {error && <div className="auth-error">{error}</div>}
+        <button type="submit" disabled={loading}>
+          {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
+        </button>
+      </form>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
-              maxLength={120}
-            />
+      <button
+        type="button"
+        className="switch-mode"
+        onClick={() => {
+          setError('');
+          setMode(isLogin ? 'register' : 'login');
+        }}
+      >
+        {isLogin ? 'Need an account? Register' : 'Already have an account? Sign in'}
+      </button>
+    </section>
+  );
+}
 
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete={isLogin ? 'current-password' : 'new-password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 8 characters"
-              minLength={isLogin ? 1 : 8}
-              maxLength={128}
-            />
+function GenerateStudioView() {
+  const [apiKey, setApiKey] = useState('');
+  const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
+  const [mode, setMode] = useState<GenerateMode>('video');
+  const [imageUrl, setImageUrl] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [output, setOutput] = useState('Run a request to preview API responses here.');
+  const [lastPayload, setLastPayload] = useState<unknown>(null);
+  const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
+  const [runStatus, setRunStatus] = useState<'idle' | 'queued' | 'processing' | 'completed' | 'failed'>('idle');
+  const [runMessage, setRunMessage] = useState('Ready to run generation.');
+  const [barDocked, setBarDocked] = useState(false);
 
-            <button type="submit" disabled={loading}>
-              {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
-            </button>
-          </form>
+  const mediaItems = useMemo(() => extractMediaUrls(lastPayload), [lastPayload]);
+  const latestImage = useMemo(() => mediaItems.find((item) => item.kind === 'image')?.url ?? '', [mediaItems]);
 
+  const parseState = (payload: unknown): string => {
+    if (!payload || typeof payload !== 'object') return '';
+    const record = payload as Record<string, unknown>;
+    const candidates = [record.state, record.status, record.job_status, record.phase];
+    const firstText = candidates.find((item) => typeof item === 'string');
+    return typeof firstText === 'string' ? firstText.toLowerCase() : '';
+  };
+
+  const parseErrorMessage = (payload: unknown): string => {
+    if (!payload || typeof payload !== 'object') return '';
+    const record = payload as Record<string, unknown>;
+    const candidates = [record.message, record.error, record.reason];
+    const firstText = candidates.find((item) => typeof item === 'string');
+    return typeof firstText === 'string' ? firstText : '';
+  };
+
+  const pollForResult = async (nextJobId: string) => {
+    const maxAttempts = 60;
+    const waitMs = 3000;
+    setRunStatus('queued');
+    setRunMessage('Job queued. Waiting for generation result...');
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await fetch('/api/download', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey.trim()}`,
+          },
+          body: JSON.stringify({ job_id: nextJobId }),
+        });
+
+        const data = await response.json();
+        setLastPayload(data);
+        setOutput(JSON.stringify(data, null, 2));
+
+        const state = parseState(data);
+        const hasMedia = extractMediaUrls(data).length > 0;
+        const hasError = Boolean(parseErrorMessage(data)) || state.includes('fail') || state.includes('error');
+
+        if (hasError) {
+          setRunStatus('failed');
+          setRunMessage(parseErrorMessage(data) || 'Generation failed. Please inspect the response JSON.');
+          return;
+        }
+
+        if (hasMedia || state.includes('complete') || state.includes('success') || state.includes('done')) {
+          setRunStatus('completed');
+          setRunMessage('Generation completed. All available media items are shown below.');
+          return;
+        }
+
+        setRunStatus('processing');
+        setRunMessage(`Processing... polling attempt ${attempt}/${maxAttempts}`);
+      } catch {
+        setRunStatus('failed');
+        setRunMessage('Auto polling failed while calling /api/download.');
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+
+    setRunStatus('failed');
+    setRunMessage('Polling timed out before completion. You can retry with the same job ID.');
+  };
+
+  const runGenerate = async () => {
+    setLoadingAction('generate');
+    setRunStatus('idle');
+    setRunMessage('Starting generation...');
+    setBarDocked(true);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          mode,
+          ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
+        }),
+      });
+
+      const data = await response.json();
+      setLastPayload(data);
+      if (data?.job_id) {
+        const nextJobId = String(data.job_id);
+        setJobId(nextJobId);
+        setOutput(JSON.stringify(data, null, 2));
+        setLoadingAction(null);
+        await pollForResult(nextJobId);
+        return;
+      }
+      setRunStatus('failed');
+      setRunMessage('No job ID returned from /api/generate.');
+      setOutput(JSON.stringify(data, null, 2));
+    } catch {
+      const fallback = { success: false, message: 'Failed to call /api/generate.' };
+      setLastPayload(fallback);
+      setRunStatus('failed');
+      setRunMessage('Failed to start generation.');
+      setOutput(JSON.stringify(fallback, null, 2));
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const runDownload = async () => {
+    setLoadingAction('download');
+    try {
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({ job_id: jobId.trim() }),
+      });
+
+      const data = await response.json();
+      setLastPayload(data);
+      setRunMessage('Manual /api/download response received.');
+      setOutput(JSON.stringify(data, null, 2));
+    } catch {
+      const fallback = { success: false, message: 'Failed to call /api/download.' };
+      setLastPayload(fallback);
+      setOutput(JSON.stringify(fallback, null, 2));
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  return (
+    <section className="studio-shell">
+      <img src={brandImage} alt="Studio background" className="studio-bg" />
+      <div className="studio-overlay" />
+
+      <div className={`studio-center ${barDocked ? 'studio-center-docked' : ''}`}>
+        <h1>YOURS TO CREATE</h1>
+
+        <div className={`studio-bar ${barDocked ? 'studio-bar-docked' : ''}`}>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(event) => setApiKey(event.target.value)}
+            placeholder="API Key"
+            className="key-input"
+          />
+          <input
+            type="text"
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            placeholder="Type a prompt..."
+            className="prompt-input"
+          />
           <button
-            type="button"
-            className="switch-mode"
-            onClick={() => {
-              setError('');
-              setMode(isLogin ? 'register' : 'login');
-            }}
+            onClick={runGenerate}
+            disabled={
+              loadingAction !== null ||
+              apiKey.trim().length < 10 ||
+              prompt.trim().length < 3 ||
+              (mode === 'image_to_video' && imageUrl.trim().length < 10)
+            }
           >
-            {isLogin ? 'Need an account? Register' : 'Already have an account? Sign in'}
+            {loadingAction === 'generate' ? 'Generating...' : 'Generate'}
           </button>
         </div>
+
+        <div className="studio-modes">
+          {(['image', 'video', 'text', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
+            <button
+              key={itemMode}
+              className={mode === itemMode ? 'active' : ''}
+              onClick={() => setMode(itemMode)}
+              type="button"
+            >
+              {itemMode}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'image_to_video' && (
+          <div className="studio-image-url">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              placeholder="Image URL for image_to_video"
+            />
+            <button type="button" className="secondary" disabled={!latestImage} onClick={() => setImageUrl(latestImage)}>
+              Use latest image
+            </button>
+          </div>
+        )}
+
+        <div className={`run-status status-${runStatus}`}>
+          <span className="dot-pulse" />
+          <strong>{runStatus.toUpperCase()}</strong>
+          <span>{runMessage}</span>
+        </div>
+
+        <div className="studio-results">
+          {runStatus !== 'completed' && (runStatus === 'queued' || runStatus === 'processing') && (
+            <div className="loading-stage">
+              <div className="ring" />
+              <p>Generating... please wait</p>
+            </div>
+          )}
+
+          {runStatus === 'failed' && <pre>{output}</pre>}
+
+          {mediaItems.length > 0 && (
+            <div className="media-grid">
+              {mediaItems.map((item) => (
+                <article key={item.url} className="media-item">
+                  {item.kind === 'video' ? (
+                    <video controls src={item.url} preload="metadata" />
+                  ) : item.kind === 'image' ? (
+                    <img src={item.url} alt="Generated result" loading="lazy" />
+                  ) : (
+                    <a href={item.url} target="_blank" rel="noreferrer">
+                      Open media URL
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="studio-manual">
+          <input value={jobId} readOnly placeholder="Job ID will appear automatically after generate" />
+          <button
+            onClick={runDownload}
+            disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
+            className="secondary"
+          >
+            {loadingAction === 'download' ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ApiDocsView() {
+  return (
+    <div className="docs-layout">
+      <section className="panel docs-panel">
+        <h2>
+          <ShieldCheck size={18} /> API Docs
+        </h2>
+        <p>Use Bearer API keys from Key Console. Base URL is your Vercel domain.</p>
+        <div className="docs-grid">
+          <article className="panel-lite">
+            <h4>POST /api/generate</h4>
+            <p>Start a generation job and get a `job_id`.</p>
+            <pre>{`{
+  "prompt": "Create a premium ad shot",
+  "mode": "video",
+  "image_url": "https://example.com/image.jpg"
+}`}</pre>
+            <pre>{`{
+  "success": true,
+  "job_id": "uuid",
+  "status": "queued"
+}`}</pre>
+          </article>
+          <article className="panel-lite">
+            <h4>POST /api/download</h4>
+            <p>Poll by `job_id` until completed or failed.</p>
+            <pre>{`{
+  "job_id": "uuid"
+}`}</pre>
+            <pre>{`{
+  "success": true,
+  "status": "completed",
+  "videos": ["https://..."],
+  "images": ["https://..."]
+}`}</pre>
+          </article>
+          <article className="panel-lite">
+            <h4>GET /api/media</h4>
+            <p>Use signed URLs returned from download responses.</p>
+            <pre>{`GET /api/media?job_id=<id>&type=video&index=1&exp=<ts>&sig=<hash>`}</pre>
+          </article>
+          <article className="panel-lite">
+            <h4>Best Practice Flow</h4>
+            <pre>{`1) Generate -> store job_id
+2) Poll every 2-4s
+3) Stop on completed/failed
+4) Render all returned media`}</pre>
+          </article>
+        </div>
       </section>
+      <DocsPlaygroundCard />
     </div>
   );
 }
 
-function Dashboard({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<'keys' | 'docs'>('keys');
+function DocsPlaygroundCard() {
+  const [apiKey, setApiKey] = useState('');
+  const [prompt, setPrompt] = useState('Create a fashion cinematic intro.');
+  const [mode, setMode] = useState<GenerateMode>('video');
+  const [imageUrl, setImageUrl] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
+  const [output, setOutput] = useState('Run a request to preview response JSON.');
+
+  const runGenerate = async () => {
+    setLoadingAction('generate');
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          mode,
+          ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
+        }),
+      });
+      const data = await response.json();
+      if (data?.job_id) setJobId(String(data.job_id));
+      setOutput(JSON.stringify(data, null, 2));
+    } catch {
+      setOutput(JSON.stringify({ success: false, message: 'Failed to call /api/generate.' }, null, 2));
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const runDownload = async () => {
+    setLoadingAction('download');
+    try {
+      const response = await fetch('/api/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({ job_id: jobId.trim() }),
+      });
+      const data = await response.json();
+      setOutput(JSON.stringify(data, null, 2));
+    } catch {
+      setOutput(JSON.stringify({ success: false, message: 'Failed to call /api/download.' }, null, 2));
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-brand">
-          <img src={brandImage} alt="EG Autonomous" />
-          <div>
-            <p>EG Autonomous</p>
-            <span>Security Console</span>
+    <section className="panel docs-panel">
+      <h2>Docs Playground</h2>
+      <p>Manual technical tester for request body and raw JSON responses.</p>
+      <div className="playground-grid">
+        <div>
+          <label>API Key</label>
+          <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="eg_xxx" />
+        </div>
+        <div>
+          <label>Mode</label>
+          <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
+            <option value="video">video</option>
+            <option value="image">image</option>
+            <option value="text">text</option>
+            <option value="image_to_video">image_to_video</option>
+          </select>
+        </div>
+        <div className="full">
+          <label>Prompt</label>
+          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        </div>
+        {mode === 'image_to_video' && (
+          <div className="full">
+            <label>Image URL</label>
+            <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." />
           </div>
+        )}
+        <div className="full">
+          <label>Job ID</label>
+          <input value={jobId} onChange={(event) => setJobId(event.target.value)} placeholder="from generate" />
         </div>
-
-        <div className="sidebar-nav">
-          <button onClick={() => setActiveTab('keys')} className={activeTab === 'keys' ? 'active' : ''}>
-            <LayoutDashboard className="w-5 h-5" />
-            API Keys
-          </button>
-          <button onClick={() => setActiveTab('docs')} className={activeTab === 'docs' ? 'active' : ''}>
-            <Book className="w-5 h-5" />
-            Docs
-          </button>
-        </div>
-
-        <div className="sidebar-user">
-          <div className="avatar">{user.email ? user.email.charAt(0).toUpperCase() : 'U'}</div>
-          <div>
-            <p>{user.email}</p>
-            <span>Secure Plan</span>
-          </div>
-        </div>
-
-        <button className="logout" onClick={() => signOut(auth)}>
-          Log Out
+      </div>
+      <div className="playground-actions">
+        <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
+          {loadingAction === 'generate' ? 'Running...' : 'POST /generate'}
         </button>
-      </aside>
-
-      <main className="dashboard-main">{activeTab === 'keys' ? <KeysView user={user} /> : <DocsView />}</main>
-    </div>
+        <button
+          className="secondary"
+          onClick={runDownload}
+          disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
+        >
+          {loadingAction === 'download' ? 'Running...' : 'POST /download'}
+        </button>
+      </div>
+      <pre>{output}</pre>
+    </section>
   );
 }
 
@@ -321,92 +754,87 @@ function KeysView({ user }: { user: User }) {
   );
 
   return (
-    <>
+    <section className="panel keys-panel">
       <header className="view-header">
         <div>
-          <h2>EG API Keys</h2>
+          <h2>Key Console</h2>
           <p>Manage generation tokens with strict operational control.</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm((value) => !value)}
-          className={showCreateForm ? 'outline' : ''}
-        >
+        <button onClick={() => setShowCreateForm((value) => !value)} className={showCreateForm ? 'outline' : ''}>
           {showCreateForm ? 'Cancel' : '+ Create New Key'}
         </button>
       </header>
 
-      <div className="view-content">
-        {newKeyData && (
-          <div className="success-banner reveal-up">
-            <div className="success-icon">
-              <Check className="w-5 h-5" />
-            </div>
-            <div>
-              <p>New secure key created</p>
-              <code>{newKeyData.key}</code>
-            </div>
-            <div className="success-actions">
-              <button onClick={() => navigator.clipboard.writeText(newKeyData.key)}>Copy</button>
-              <button onClick={() => setNewKeyData(null)}>Dismiss</button>
-            </div>
+      {newKeyData && (
+        <div className="success-banner">
+          <div className="success-icon">
+            <Check className="w-5 h-5" />
           </div>
-        )}
-
-        <div className="stats-grid">
-          <StatCard label="Total Keys" value={stats.total} />
-          <StatCard label="Active Keys" value={stats.active} />
-          <StatCard label="Requests Today" value={stats.requestsToday} />
-          <StatCard label="Remaining Today" value={stats.remainingToday} />
-          <StatCard label="Revoked" value={stats.revoked} danger />
+          <div>
+            <p>New secure key created</p>
+            <code>{newKeyData.key}</code>
+          </div>
+          <div className="success-actions">
+            <button onClick={() => navigator.clipboard.writeText(newKeyData.key)}>Copy</button>
+            <button onClick={() => setNewKeyData(null)}>Dismiss</button>
+          </div>
         </div>
+      )}
 
-        {showCreateForm && (
-          <CreateKeyForm
-            user={user}
-            onSuccess={(data) => {
-              setNewKeyData(data);
-              setShowCreateForm(false);
-            }}
-          />
-        )}
+      <div className="stats-grid">
+        <StatCard label="Total Keys" value={stats.total} />
+        <StatCard label="Active Keys" value={stats.active} />
+        <StatCard label="Requests Today" value={stats.requestsToday} />
+        <StatCard label="Remaining Today" value={stats.remainingToday} />
+        <StatCard label="Revoked" value={stats.revoked} danger />
+      </div>
 
-        <div className="table-card reveal-up-delay">
-          <div className="table-wrap">
-            <table>
-              <thead>
+      {showCreateForm && (
+        <CreateKeyForm
+          user={user}
+          onSuccess={(data) => {
+            setNewKeyData(data);
+            setShowCreateForm(false);
+          }}
+        />
+      )}
+
+      <div className="table-card">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name & Project</th>
+                <th>Key</th>
+                <th className="text-center">Status</th>
+                <th className="text-center">Usage Today</th>
+                <th>Created</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((item) => (
+                <KeyRow key={item.id} item={item} />
+              ))}
+              {keys.length === 0 && (
                 <tr>
-                  <th>Name & Project</th>
-                  <th>Key</th>
-                  <th className="text-center">Status</th>
-                  <th className="text-center">Usage Today</th>
-                  <th>Created</th>
-                  <th className="text-right">Actions</th>
+                  <td colSpan={6} className="empty-row">
+                    <Fingerprint className="w-8 h-8" />
+                    <p>No API keys yet. Create one to get started.</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {keys.map((item) => (
-                  <KeyRow key={item.id} item={item} />
-                ))}
-                {keys.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="empty-row">
-                      <Fingerprint className="w-8 h-8" />
-                      <p>No API keys yet. Create one to get started.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-    </>
+    </section>
   );
 }
 
 function StatCard({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
   return (
-    <div className="stat-card reveal-up">
+    <div className="stat-card">
       <p>{label}</p>
       <strong className={danger ? 'danger' : ''}>{value}</strong>
     </div>
@@ -470,7 +898,7 @@ function CreateKeyForm({ user, onSuccess }: { user: User; onSuccess: (data: ApiK
   };
 
   return (
-    <form onSubmit={handleSubmit} className="create-form reveal-up">
+    <form onSubmit={handleSubmit} className="create-form">
       <div className="form-header">
         <h3>Configure Secure Key</h3>
         <p>All keys are generated with browser cryptographic randomness.</p>
@@ -625,221 +1053,5 @@ function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
         )}
       </td>
     </tr>
-  );
-}
-
-function DocsView() {
-  const [apiKey, setApiKey] = useState('');
-  const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
-  const [mode, setMode] = useState<GenerateMode>('video');
-  const [imageUrl, setImageUrl] = useState('');
-  const [jobId, setJobId] = useState('');
-  const [output, setOutput] = useState('Run a request to preview API responses here.');
-  const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
-
-  const runGenerate = async () => {
-    setLoadingAction('generate');
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          prompt,
-          mode,
-          ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
-        }),
-      });
-
-      const data = await response.json();
-      if (data?.job_id) {
-        setJobId(String(data.job_id));
-      }
-      setOutput(JSON.stringify(data, null, 2));
-    } catch {
-      setOutput(JSON.stringify({ success: false, message: 'Failed to call /api/generate.' }, null, 2));
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
-  const runDownload = async () => {
-    setLoadingAction('download');
-    try {
-      const response = await fetch('/api/download', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
-        },
-        body: JSON.stringify({ job_id: jobId.trim() }),
-      });
-
-      const data = await response.json();
-      setOutput(JSON.stringify(data, null, 2));
-    } catch {
-      setOutput(JSON.stringify({ success: false, message: 'Failed to call /api/download.' }, null, 2));
-    } finally {
-      setLoadingAction(null);
-    }
-  };
-
-  return (
-    <>
-      <header className="view-header">
-        <div>
-          <h2>API Documentation</h2>
-          <p>Use secure Bearer tokens from EG Autonomous dashboard.</p>
-        </div>
-      </header>
-
-      <div className="view-content">
-        <div className="docs-card reveal-up">
-          <h4>
-            <ShieldCheck className="w-4 h-4" />
-            POST /api/generate
-          </h4>
-          <p>Queue generation task with mode support: text, image, video, image_to_video.</p>
-
-          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Create a cinematic launch video for EG Autonomous",
-    "mode": "video"
-  }'`}</pre>
-
-          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Create a futuristic city poster for EG Autonomous",
-    "mode": "image"
-  }'`}</pre>
-
-          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/generate \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Animate this image",
-    "mode": "image_to_video",
-    "image_url": "https://example.com/image.jpg"
-  }'`}</pre>
-
-          <h4>
-            <ShieldCheck className="w-4 h-4" />
-            POST /api/download
-          </h4>
-          <p>Poll by job ID until state becomes completed or failed. Completed responses include EG Autonomous proxy media URLs.</p>
-
-          <pre>{`curl -X POST https://eg-autonomous.vercel.app/api/download \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "job_id": "268c2294-98c9-44ab-9482-3915a03f794b"
-  }'`}</pre>
-
-          <h4>
-            <ShieldCheck className="w-4 h-4" />
-            GET /api/media
-          </h4>
-          <p>Secure media proxy endpoint. Use the signed URL returned by <code>/api/download</code> directly (no extra token header).</p>
-
-          <pre>{`curl -L "https://eg-autonomous.vercel.app/api/media?job_id=<job-id>&type=video&index=1&exp=<unix-seconds>&sig=<signature>"`}</pre>
-
-          <h4>
-            <ShieldCheck className="w-4 h-4" />
-            Internal Endpoints
-          </h4>
-          <p>
-            <code>/api/set-cookies</code> is admin-protected for Meta cookie updates. <code>/api/received-video</code> is a
-            secured callback endpoint for your automation worker.
-          </p>
-        </div>
-
-        <div className="docs-card reveal-up-delay">
-          <h4>
-            <ShieldCheck className="w-4 h-4" />
-            API Playground
-          </h4>
-          <p>Use this section to test your key and endpoints directly from the dashboard.</p>
-
-          <div className="playground-grid">
-            <div>
-              <label>API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="eg_xxxxxxxxxxxxxxxxxxxxxxxxxx"
-              />
-            </div>
-            <div>
-              <label>Prompt</label>
-              <input
-                type="text"
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Describe your video idea"
-              />
-            </div>
-            <div>
-              <label>Mode</label>
-              <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
-                <option value="video">video</option>
-                <option value="image">image</option>
-                <option value="text">text</option>
-                <option value="image_to_video">image_to_video</option>
-              </select>
-            </div>
-            {mode === 'image_to_video' && (
-              <div>
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(event) => setImageUrl(event.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-            )}
-            <div>
-              <label>Job ID</label>
-              <input
-                type="text"
-                value={jobId}
-                onChange={(event) => setJobId(event.target.value)}
-                placeholder="Returned from /api/generate"
-              />
-            </div>
-          </div>
-
-          <div className="playground-actions">
-            <button
-              onClick={runGenerate}
-              disabled={
-                loadingAction !== null ||
-                apiKey.trim().length < 10 ||
-                prompt.trim().length < 3 ||
-                (mode === 'image_to_video' && imageUrl.trim().length < 10)
-              }
-            >
-              {loadingAction === 'generate' ? 'Generating...' : 'Test Generate'}
-            </button>
-            <button
-              onClick={runDownload}
-              disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
-              className="secondary"
-            >
-              {loadingAction === 'download' ? 'Polling...' : 'Test Download'}
-            </button>
-          </div>
-
-          <pre>{output}</pre>
-        </div>
-      </div>
-    </>
   );
 }
