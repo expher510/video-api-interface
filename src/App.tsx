@@ -761,6 +761,7 @@ function ApiDocsView({ user }: { user: User | null }) {
           <article className="panel-lite">
             <h4>POST /api/download</h4>
             <p>Poll by `job_id` until completed or failed.</p>
+            <pre>{`POST ${API_BASE_URL}/api/download`}</pre>
             <pre>{`{
   "job_id": "uuid"
 }`}</pre>
@@ -770,18 +771,24 @@ function ApiDocsView({ user }: { user: User | null }) {
   "videos": ["https://..."],
   "images": ["https://..."]
 }`}</pre>
+            <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"job_id":"<job-id-from-generate>"}'`}</pre>
           </article>
           <article className="panel-lite">
-            <h4>GET /api/media</h4>
-            <p>Use signed URLs returned from download responses.</p>
-            <pre>{`GET ${API_BASE_URL}/api/media?job_id=<id>&type=video&index=1&exp=<ts>&sig=<hash>`}</pre>
-          </article>
-          <article className="panel-lite">
-            <h4>Copy / Paste cURL</h4>
+            <h4>Copy / Paste cURL - Generate</h4>
             <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"prompt":"Create a cinematic teaser","mode":"video"}'`}</pre>
+          </article>
+          <article className="panel-lite">
+            <h4>Copy / Paste cURL - Download</h4>
+            <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"job_id":"<job-id-from-generate>"}'`}</pre>
           </article>
         </div>
       </section>
@@ -800,27 +807,40 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   const [output, setOutput] = useState('Run a request to preview response JSON.');
   const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(false);
+  const [activeRequest, setActiveRequest] = useState<'generate' | 'download'>('generate');
 
   const requestPreview = useMemo(
     () =>
       JSON.stringify(
-        {
-          method: 'POST',
-          url: `${API_BASE_URL}/api/generate`,
-          headers: {
-            Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
-            'Content-Type': 'application/json',
-          },
-          body: {
-            prompt,
-            mode,
-            ...(mode === 'image_to_video' ? { image_url: imageUrl || 'https://example.com/source.jpg' } : {}),
-          },
-        },
+        activeRequest === 'download'
+          ? {
+              method: 'POST',
+              url: `${API_BASE_URL}/api/download`,
+              headers: {
+                Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
+                'Content-Type': 'application/json',
+              },
+              body: {
+                job_id: jobId || '<job-id-from-generate>',
+              },
+            }
+          : {
+              method: 'POST',
+              url: `${API_BASE_URL}/api/generate`,
+              headers: {
+                Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
+                'Content-Type': 'application/json',
+              },
+              body: {
+                prompt,
+                mode,
+                ...(mode === 'image_to_video' ? { image_url: imageUrl || 'https://example.com/source.jpg' } : {}),
+              },
+            },
         null,
         2,
       ),
-    [apiKey, imageUrl, mode, prompt],
+    [activeRequest, apiKey, imageUrl, jobId, mode, prompt],
   );
 
   useEffect(() => {
@@ -854,6 +874,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   }, [user]);
 
   const runGenerate = async () => {
+    setActiveRequest('generate');
     setLoadingAction('generate');
     try {
       const response = await fetch('/api/generate', {
@@ -879,6 +900,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   };
 
   const runDownload = async () => {
+    setActiveRequest('download');
     setLoadingAction('download');
     try {
       const response = await fetch('/api/download', {
@@ -953,7 +975,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         <article className="code-panel">
           <div className="code-panel-head">
             <span>Request</span>
-            <code>POST /api/generate</code>
+            <code>{activeRequest === 'download' ? 'POST /api/download' : 'POST /api/generate'}</code>
           </div>
           <pre>{requestPreview}</pre>
         </article>
