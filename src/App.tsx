@@ -826,6 +826,34 @@ function N8nTutorialComposition() {
     { title: 'Save job_id', body: 'Store the returned job_id for polling' },
     { title: 'POST /api/download', body: 'Poll until videos or images are returned' },
   ];
+  const requestSnippet =
+    sceneIndex < 3
+      ? `POST ${API_BASE_URL}/api/generate
+Authorization: Bearer eg_xxx
+
+{
+  "prompt": "Create a cinematic teaser",
+  "mode": "video"
+}`
+      : `POST ${API_BASE_URL}/api/download
+Authorization: Bearer eg_xxx
+
+{
+  "job_id": "268c..."
+}`;
+  const responseSnippet =
+    sceneIndex < 2
+      ? `{
+  "success": true,
+  "job_id": "268c...",
+  "status": "queued"
+}`
+      : `{
+  "success": true,
+  "status": "completed",
+  "videos": ["https://..."],
+  "images": ["https://..."]
+}`;
 
   return (
     <AbsoluteFill className="tutorial-video-scene">
@@ -844,6 +872,16 @@ function N8nTutorialComposition() {
       </div>
       <div className="tutorial-request-strip">
         <code>{sceneIndex < 3 ? `POST ${API_BASE_URL}/api/generate` : `POST ${API_BASE_URL}/api/download`}</code>
+      </div>
+      <div className="tutorial-io-grid">
+        <div className="tutorial-code-card">
+          <span>Request</span>
+          <pre>{requestSnippet}</pre>
+        </div>
+        <div className="tutorial-code-card response">
+          <span>Response</span>
+          <pre>{responseSnippet}</pre>
+        </div>
       </div>
       <div className="tutorial-n8n-canvas">
         <div className="tutorial-n8n-node">Trigger</div>

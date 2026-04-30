@@ -794,14 +794,14 @@ pre {
     radial-gradient(circle at 18% 18%, rgba(46, 230, 205, 0.22), transparent 32%);
   color: #f8fcff;
   font-family: 'Chakra Petch', sans-serif;
-  padding: 58px;
+  padding: 42px;
 }
 .tutorial-video-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  font-size: 28px;
+  font-size: 24px;
 }
 .tutorial-video-header span {
   color: #8ad8ff;
@@ -810,17 +810,17 @@ pre {
   font-family: 'Archivo Black', sans-serif;
 }
 .tutorial-flow {
-  margin-top: 70px;
+  margin-top: 32px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  gap: 14px;
 }
 .tutorial-node {
-  min-height: 220px;
+  min-height: 118px;
   border: 2px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
-  padding: 22px;
+  padding: 15px;
   opacity: 0.52;
 }
 .tutorial-node.active {
@@ -831,8 +831,8 @@ pre {
 .tutorial-node span {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #2ee6cd;
   color: #081018;
@@ -840,25 +840,58 @@ pre {
 }
 .tutorial-node strong {
   display: block;
-  margin-top: 24px;
-  font-size: 28px;
+  margin-top: 10px;
+  font-size: 21px;
 }
 .tutorial-node p {
-  margin: 12px 0 0;
+  margin: 7px 0 0;
   color: #c7dfef;
-  font-size: 21px;
-  line-height: 1.35;
+  font-size: 16px;
+  line-height: 1.28;
 }
 .tutorial-request-strip {
-  margin-top: 42px;
+  margin-top: 22px;
   border-radius: 8px;
   background: rgba(2, 9, 14, 0.72);
   border: 1px solid rgba(150, 200, 238, 0.2);
-  padding: 18px 22px;
-  font-size: 24px;
+  padding: 13px 18px;
+  font-size: 19px;
+}
+.tutorial-io-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.tutorial-code-card {
+  border-radius: 8px;
+  border: 1px solid rgba(150, 200, 238, 0.22);
+  background: rgba(2, 9, 14, 0.75);
+  overflow: hidden;
+}
+.tutorial-code-card span {
+  display: block;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(150, 200, 238, 0.16);
+  color: #8ad8ff;
+  font-size: 18px;
+  font-weight: 900;
+}
+.tutorial-code-card.response span {
+  color: #2ee6cd;
+}
+.tutorial-code-card pre {
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  background: transparent;
+  color: #eff8ff;
+  font-size: 18px;
+  line-height: 1.32;
+  white-space: pre-wrap;
 }
 .tutorial-n8n-canvas {
-  margin-top: 42px;
+  margin-top: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -868,8 +901,8 @@ pre {
   border-radius: 8px;
   border: 2px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
-  padding: 18px 24px;
-  font-size: 24px;
+  padding: 13px 20px;
+  font-size: 20px;
   font-weight: 800;
 }
 .tutorial-n8n-node.accent {
@@ -877,15 +910,15 @@ pre {
   border-color: rgba(46, 167, 255, 0.7);
 }
 .tutorial-line {
-  width: 90px;
+  width: 70px;
   height: 3px;
   background: #8ad8ff;
 }
 .tutorial-progress {
   position: absolute;
-  left: 58px;
-  right: 58px;
-  bottom: 42px;
+  left: 42px;
+  right: 42px;
+  bottom: 28px;
   height: 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.13);
