@@ -582,7 +582,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
             <select value={apiKey} onChange={(event) => setApiKey(event.target.value)} className="key-input">
               {userKeys.map((item) => (
                 <option key={item.id} value={item.key}>
-                  {item.name || item.project || 'API Key'} - {maskApiKey(item.key)}
+                  {item.name || item.project || 'API Key'}
                 </option>
               ))}
             </select>
