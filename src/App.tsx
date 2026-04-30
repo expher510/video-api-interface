@@ -199,7 +199,7 @@ export default function App() {
       </aside>
 
       <main className="main-stage">
-        {section === 'generate' && <GenerateStudioView />}
+        {section === 'generate' && <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} />}
         {section === 'docs' && <ApiDocsView />}
         {section === 'keys' && (user ? <KeysView user={user} /> : <AuthScreen />)}
       </main>
@@ -297,7 +297,7 @@ function AuthScreen() {
   );
 }
 
-function GenerateStudioView() {
+function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onOpenKeyConsole: () => void }) {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
   const [mode, setMode] = useState<GenerateMode>('video');
@@ -314,9 +314,42 @@ function GenerateStudioView() {
   const [regenSourceUrl, setRegenSourceUrl] = useState('');
   const [regenPrompt, setRegenPrompt] = useState('Create a stronger cinematic variation.');
   const [activeRegenSourceUrl, setActiveRegenSourceUrl] = useState('');
+  const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(false);
+  const [keyPromptOpen, setKeyPromptOpen] = useState(false);
 
   const mediaItems = useMemo(() => galleryItems, [galleryItems]);
   const latestImage = useMemo(() => mediaItems.find((item) => item.kind === 'image')?.url ?? '', [mediaItems]);
+
+  useEffect(() => {
+    if (!user) {
+      setUserKeys([]);
+      setApiKey('');
+      return;
+    }
+
+    setLoadingKeys(true);
+    const qWhere = query(collection(db, 'api_keys'), where('user_id', '==', user.uid));
+    const unsub = onSnapshot(
+      qWhere,
+      (snapshot) => {
+        const keys = snapshot.docs
+          .map((docItem) => coerceKeyDoc(docItem.id, docItem.data() as Record<string, unknown>))
+          .filter((item) => item.status === 'active')
+          .sort((a, b) => b.created_at - a.created_at);
+
+        setUserKeys(keys);
+        setApiKey((currentKey) => (keys.some((item) => item.key === currentKey) ? currentKey : keys[0]?.key ?? ''));
+        setLoadingKeys(false);
+      },
+      () => {
+        setUserKeys([]);
+        setLoadingKeys(false);
+      },
+    );
+
+    return unsub;
+  }, [user]);
 
   const parseState = (payload: unknown): string => {
     if (!payload || typeof payload !== 'object') return '';
@@ -406,6 +439,11 @@ function GenerateStudioView() {
   };
 
   const runGenerate = async () => {
+    if (!apiKey.trim()) {
+      setKeyPromptOpen(true);
+      return;
+    }
+
     setLoadingAction('generate');
     setRunStatus('idle');
     setRunMessage('Starting generation...');
@@ -481,6 +519,10 @@ function GenerateStudioView() {
 
   const runRegenerate = async () => {
     if (!regenSourceUrl.trim() || !regenPrompt.trim()) return;
+    if (!apiKey.trim()) {
+      setKeyPromptOpen(true);
+      return;
+    }
 
     setRegenOpen(false);
     setMode('image_to_video');
@@ -536,13 +578,19 @@ function GenerateStudioView() {
         <h1>YOURS TO CREATE</h1>
 
         <div className={`studio-bar ${barDocked ? 'studio-bar-docked' : ''}`}>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
-            placeholder="API Key"
-            className="key-input"
-          />
+          {userKeys.length > 0 ? (
+            <select value={apiKey} onChange={(event) => setApiKey(event.target.value)} className="key-input">
+              {userKeys.map((item) => (
+                <option key={item.id} value={item.key}>
+                  {item.name || item.project || 'API Key'} - {maskApiKey(item.key)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button type="button" className="key-input key-select-empty" onClick={onOpenKeyConsole}>
+              {loadingKeys ? 'Loading keys...' : user ? 'Create API key' : 'Sign in for API key'}
+            </button>
+          )}
           <input
             type="text"
             value={prompt}
@@ -554,7 +602,6 @@ function GenerateStudioView() {
             onClick={runGenerate}
             disabled={
               loadingAction !== null ||
-              apiKey.trim().length < 10 ||
               prompt.trim().length < 3 ||
               (mode === 'image_to_video' && imageUrl.trim().length < 10)
             }
@@ -647,8 +694,31 @@ function GenerateStudioView() {
                 <button type="button" className="secondary" onClick={() => setRegenOpen(false)}>
                   Cancel
                 </button>
-                <button type="button" onClick={runRegenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
+                <button type="button" onClick={runRegenerate} disabled={loadingAction !== null}>
                   Generate Variant
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {keyPromptOpen && (
+          <div className="regen-modal-backdrop" role="dialog" aria-modal="true">
+            <div className="regen-modal">
+              <h3>Create API key first</h3>
+              <p className="modal-copy">You need an active API key before generating media.</p>
+              <div className="regen-actions">
+                <button type="button" className="secondary" onClick={() => setKeyPromptOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeyPromptOpen(false);
+                    onOpenKeyConsole();
+                  }}
+                >
+                  Create API Key
                 </button>
               </div>
             </div>

@@ -189,19 +189,31 @@ button {
   backdrop-filter: blur(8px);
 }
 .studio-bar input,
+.studio-bar select,
 .studio-bar button {
   border-radius: 999px;
   border: 0;
   padding: 0.8rem 1rem;
 }
-.studio-bar input {
+.studio-bar input,
+.studio-bar select {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
+}
+.studio-bar select {
+  min-width: 0;
+  outline: none;
 }
 .studio-bar button {
   background: linear-gradient(135deg, #2ee6cd, #37a9ff);
   color: #0c1622;
   font-weight: 800;
+}
+.studio-bar .key-select-empty {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
 }
 .studio-bar button:disabled {
   opacity: 0.6;
@@ -567,6 +579,10 @@ pre {
 .regen-modal h3 {
   margin: 0 0 0.2rem;
 }
+.modal-copy {
+  margin: 0 0 0.4rem;
+  color: var(--text-soft);
+}
 .regen-modal label {
   color: var(--text-soft);
   font-size: 0.78rem;
@@ -789,6 +805,7 @@ th { text-align: left; color: var(--text-soft); font-size: 0.72rem; text-transfo
     border-radius: 18px;
   }
   .studio-bar input,
+  .studio-bar select,
   .studio-bar button {
     border-radius: 12px;
   }
