@@ -747,6 +747,7 @@ function ApiDocsView({ user }: { user: User | null }) {
           <article className="panel-lite">
             <h4>POST /api/generate</h4>
             <p>Start a generation job and get a `job_id`.</p>
+            <pre>{`POST ${API_BASE_URL}/api/generate`}</pre>
             <pre>{`{
   "prompt": "Create a premium ad shot",
   "mode": "video",
@@ -771,10 +772,6 @@ function ApiDocsView({ user }: { user: User | null }) {
   "videos": ["https://..."],
   "images": ["https://..."]
 }`}</pre>
-            <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"job_id":"<job-id-from-generate>"}'`}</pre>
           </article>
           <article className="panel-lite">
             <h4>Copy / Paste cURL - Generate</h4>
