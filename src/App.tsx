@@ -20,6 +20,8 @@ import {
 } from 'firebase/firestore';
 import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video } from 'lucide-react';
 import { format } from 'date-fns';
+import { Player } from '@remotion/player';
+import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 
 type AuthMode = 'login' | 'register';
 type ApiKeyStatus = 'active' | 'revoked';
@@ -732,6 +734,20 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
 }
 
 function ApiDocsView({ user }: { user: User | null }) {
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+
+  useEffect(() => {
+    const seenTutorial = window.localStorage.getItem('eg-n8n-tutorial-seen');
+    if (!seenTutorial) {
+      setTutorialOpen(true);
+    }
+  }, []);
+
+  const closeTutorial = () => {
+    window.localStorage.setItem('eg-n8n-tutorial-seen', 'true');
+    setTutorialOpen(false);
+  };
+
   return (
     <div className="docs-layout">
       <section className="panel docs-panel">
@@ -743,6 +759,9 @@ function ApiDocsView({ user }: { user: User | null }) {
           <span>Production Base URL</span>
           <code>{API_BASE_URL}</code>
         </div>
+        <button type="button" className="tutorial-launch-card" onClick={() => setTutorialOpen(true)}>
+          Watch n8n API tutorial
+        </button>
         <div className="docs-grid">
           <article className="panel-lite">
             <h4>POST /api/generate</h4>
@@ -790,6 +809,80 @@ function ApiDocsView({ user }: { user: User | null }) {
         </div>
       </section>
       <DocsPlaygroundCard user={user} />
+      {tutorialOpen && <N8nTutorialModal onClose={closeTutorial} />}
+    </div>
+  );
+}
+
+function N8nTutorialComposition() {
+  const frame = useCurrentFrame();
+  const progress = Math.min(1, frame / 330);
+  const pulse = interpolate(frame % 60, [0, 30, 60], [0.65, 1, 0.65]);
+  const sceneIndex = frame < 75 ? 0 : frame < 155 ? 1 : frame < 235 ? 2 : 3;
+
+  const scenes = [
+    { title: 'n8n Trigger', body: 'Start with Manual Trigger or Webhook' },
+    { title: 'POST /api/generate', body: 'Send prompt + mode + Bearer API key' },
+    { title: 'Save job_id', body: 'Store the returned job_id for polling' },
+    { title: 'POST /api/download', body: 'Poll until videos or images are returned' },
+  ];
+
+  return (
+    <AbsoluteFill className="tutorial-video-scene">
+      <div className="tutorial-video-header">
+        <span>EG Autonomous API</span>
+        <strong>n8n workflow tutorial</strong>
+      </div>
+      <div className="tutorial-flow">
+        {scenes.map((scene, index) => (
+          <div key={scene.title} className={`tutorial-node ${index <= sceneIndex ? 'active' : ''}`}>
+            <span>{index + 1}</span>
+            <strong>{scene.title}</strong>
+            <p>{scene.body}</p>
+          </div>
+        ))}
+      </div>
+      <div className="tutorial-request-strip">
+        <code>{sceneIndex < 3 ? `POST ${API_BASE_URL}/api/generate` : `POST ${API_BASE_URL}/api/download`}</code>
+      </div>
+      <div className="tutorial-n8n-canvas">
+        <div className="tutorial-n8n-node">Trigger</div>
+        <div className="tutorial-line" />
+        <div className="tutorial-n8n-node accent">HTTP Request</div>
+        <div className="tutorial-line" />
+        <div className="tutorial-n8n-node">Response</div>
+      </div>
+      <div className="tutorial-progress">
+        <div style={{ width: `${progress * 100}%`, opacity: pulse }} />
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+function N8nTutorialModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="tutorial-modal-backdrop" role="dialog" aria-modal="true">
+      <div className="tutorial-modal">
+        <div className="tutorial-modal-head">
+          <div>
+            <p>Visual guide</p>
+            <h3>Use the API in n8n</h3>
+          </div>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <Player
+          component={N8nTutorialComposition}
+          durationInFrames={330}
+          compositionWidth={1280}
+          compositionHeight={720}
+          fps={30}
+          controls
+          loop
+          style={{ width: '100%', borderRadius: 8, overflow: 'hidden' }}
+        />
+      </div>
     </div>
   );
 }
@@ -804,41 +897,6 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   const [output, setOutput] = useState('Run a request to preview response JSON.');
   const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(false);
-  const [activeRequest, setActiveRequest] = useState<'generate' | 'download'>('generate');
-
-  const requestPreview = useMemo(
-    () =>
-      JSON.stringify(
-        activeRequest === 'download'
-          ? {
-              method: 'POST',
-              url: `${API_BASE_URL}/api/download`,
-              headers: {
-                Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
-                'Content-Type': 'application/json',
-              },
-              body: {
-                job_id: jobId || '<job-id-from-generate>',
-              },
-            }
-          : {
-              method: 'POST',
-              url: `${API_BASE_URL}/api/generate`,
-              headers: {
-                Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
-                'Content-Type': 'application/json',
-              },
-              body: {
-                prompt,
-                mode,
-                ...(mode === 'image_to_video' ? { image_url: imageUrl || 'https://example.com/source.jpg' } : {}),
-              },
-            },
-        null,
-        2,
-      ),
-    [activeRequest, apiKey, imageUrl, jobId, mode, prompt],
-  );
 
   useEffect(() => {
     if (!user) {
@@ -871,7 +929,6 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   }, [user]);
 
   const runGenerate = async () => {
-    setActiveRequest('generate');
     setLoadingAction('generate');
     try {
       const response = await fetch('/api/generate', {
@@ -897,7 +954,6 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   };
 
   const runDownload = async () => {
-    setActiveRequest('download');
     setLoadingAction('download');
     try {
       const response = await fetch('/api/download', {
@@ -968,14 +1024,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
           {loadingAction === 'download' ? 'Running...' : 'POST /download'}
         </button>
       </div>
-      <div className="request-response-grid">
-        <article className="code-panel">
-          <div className="code-panel-head">
-            <span>Request</span>
-            <code>{activeRequest === 'download' ? 'POST /api/download' : 'POST /api/generate'}</code>
-          </div>
-          <pre>{requestPreview}</pre>
-        </article>
+      <div className="request-response-grid response-only-grid">
         <article className="code-panel">
           <div className="code-panel-head">
             <span>Response</span>

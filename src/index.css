@@ -664,6 +664,17 @@ pre {
   color: #ecfbff;
   overflow-wrap: anywhere;
 }
+.tutorial-launch-card {
+  margin-top: 0.75rem;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(46, 167, 255, 0.34);
+  background: rgba(46, 167, 255, 0.12);
+  color: #effaff;
+  padding: 0.78rem 0.9rem;
+  text-align: left;
+  font-weight: 800;
+}
 .docs-playground-controls {
   margin-top: 0.9rem;
   display: grid;
@@ -699,6 +710,9 @@ pre {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
 }
+.response-only-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
 .code-panel {
   border: 1px solid rgba(150, 200, 238, 0.2);
   background: rgba(7, 18, 29, 0.74);
@@ -730,6 +744,156 @@ pre {
   border-radius: 0;
   max-height: 420px;
   min-height: 280px;
+}
+
+.tutorial-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 8, 13, 0.74);
+  padding: 1rem;
+}
+.tutorial-modal {
+  width: min(960px, 96vw);
+  border: 1px solid rgba(150, 200, 238, 0.25);
+  background: rgba(10, 18, 29, 0.98);
+  border-radius: 8px;
+  padding: 0.85rem;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+}
+.tutorial-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.tutorial-modal-head p {
+  margin: 0;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.tutorial-modal-head h3 {
+  margin: 0.12rem 0 0;
+}
+.tutorial-modal-head button {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 0.55rem 0.75rem;
+}
+.tutorial-video-scene {
+  background:
+    linear-gradient(135deg, #081018, #132f42),
+    radial-gradient(circle at 18% 18%, rgba(46, 230, 205, 0.22), transparent 32%);
+  color: #f8fcff;
+  font-family: 'Chakra Petch', sans-serif;
+  padding: 58px;
+}
+.tutorial-video-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  font-size: 28px;
+}
+.tutorial-video-header span {
+  color: #8ad8ff;
+}
+.tutorial-video-header strong {
+  font-family: 'Archivo Black', sans-serif;
+}
+.tutorial-flow {
+  margin-top: 70px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.tutorial-node {
+  min-height: 220px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 22px;
+  opacity: 0.52;
+}
+.tutorial-node.active {
+  opacity: 1;
+  border-color: rgba(46, 230, 205, 0.72);
+  background: rgba(46, 230, 205, 0.12);
+}
+.tutorial-node span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #2ee6cd;
+  color: #081018;
+  font-weight: 900;
+}
+.tutorial-node strong {
+  display: block;
+  margin-top: 24px;
+  font-size: 28px;
+}
+.tutorial-node p {
+  margin: 12px 0 0;
+  color: #c7dfef;
+  font-size: 21px;
+  line-height: 1.35;
+}
+.tutorial-request-strip {
+  margin-top: 42px;
+  border-radius: 8px;
+  background: rgba(2, 9, 14, 0.72);
+  border: 1px solid rgba(150, 200, 238, 0.2);
+  padding: 18px 22px;
+  font-size: 24px;
+}
+.tutorial-n8n-canvas {
+  margin-top: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.tutorial-n8n-node {
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 18px 24px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.tutorial-n8n-node.accent {
+  background: rgba(46, 167, 255, 0.22);
+  border-color: rgba(46, 167, 255, 0.7);
+}
+.tutorial-line {
+  width: 90px;
+  height: 3px;
+  background: #8ad8ff;
+}
+.tutorial-progress {
+  position: absolute;
+  left: 58px;
+  right: 58px;
+  bottom: 42px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13);
+  overflow: hidden;
+}
+.tutorial-progress div {
+  height: 100%;
+  background: linear-gradient(90deg, #2ee6cd, #37a9ff);
 }
 
 .docs-panel h2,
