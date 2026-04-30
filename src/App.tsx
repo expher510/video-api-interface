@@ -47,6 +47,7 @@ type MediaItem = {
 
 const LIMIT_OPTIONS = [50, 100, 200, 500, 1000, 5000];
 const MAX_TEXT_LENGTH = 64;
+const API_BASE_URL = 'https://eg-autonomous.vercel.app';
 
 const normalizeLabel = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -200,7 +201,7 @@ export default function App() {
 
       <main className="main-stage">
         {section === 'generate' && <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} />}
-        {section === 'docs' && <ApiDocsView />}
+        {section === 'docs' && <ApiDocsView user={user} />}
         {section === 'keys' && (user ? <KeysView user={user} /> : <AuthScreen />)}
       </main>
     </div>
@@ -730,14 +731,18 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
   );
 }
 
-function ApiDocsView() {
+function ApiDocsView({ user }: { user: User | null }) {
   return (
     <div className="docs-layout">
       <section className="panel docs-panel">
         <h2>
           <ShieldCheck size={18} /> API Docs
         </h2>
-        <p>Use Bearer API keys from Key Console. Base URL is your Vercel domain.</p>
+        <p>Use Bearer API keys from Key Console. Copy the production URL directly into your app or automation flow.</p>
+        <div className="base-url-card">
+          <span>Production Base URL</span>
+          <code>{API_BASE_URL}</code>
+        </div>
         <div className="docs-grid">
           <article className="panel-lite">
             <h4>POST /api/generate</h4>
@@ -769,23 +774,23 @@ function ApiDocsView() {
           <article className="panel-lite">
             <h4>GET /api/media</h4>
             <p>Use signed URLs returned from download responses.</p>
-            <pre>{`GET /api/media?job_id=<id>&type=video&index=1&exp=<ts>&sig=<hash>`}</pre>
+            <pre>{`GET ${API_BASE_URL}/api/media?job_id=<id>&type=video&index=1&exp=<ts>&sig=<hash>`}</pre>
           </article>
           <article className="panel-lite">
-            <h4>Best Practice Flow</h4>
-            <pre>{`1) Generate -> store job_id
-2) Poll every 2-4s
-3) Stop on completed/failed
-4) Render all returned media`}</pre>
+            <h4>Copy / Paste cURL</h4>
+            <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"prompt":"Create a cinematic teaser","mode":"video"}'`}</pre>
           </article>
         </div>
       </section>
-      <DocsPlaygroundCard />
+      <DocsPlaygroundCard user={user} />
     </div>
   );
 }
 
-function DocsPlaygroundCard() {
+function DocsPlaygroundCard({ user }: { user: User | null }) {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a fashion cinematic intro.');
   const [mode, setMode] = useState<GenerateMode>('video');
@@ -793,6 +798,60 @@ function DocsPlaygroundCard() {
   const [jobId, setJobId] = useState('');
   const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
   const [output, setOutput] = useState('Run a request to preview response JSON.');
+  const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(false);
+
+  const requestPreview = useMemo(
+    () =>
+      JSON.stringify(
+        {
+          method: 'POST',
+          url: `${API_BASE_URL}/api/generate`,
+          headers: {
+            Authorization: apiKey ? 'Bearer <selected-api-key>' : 'Bearer <api-key>',
+            'Content-Type': 'application/json',
+          },
+          body: {
+            prompt,
+            mode,
+            ...(mode === 'image_to_video' ? { image_url: imageUrl || 'https://example.com/source.jpg' } : {}),
+          },
+        },
+        null,
+        2,
+      ),
+    [apiKey, imageUrl, mode, prompt],
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setUserKeys([]);
+      setApiKey('');
+      return;
+    }
+
+    setLoadingKeys(true);
+    const qWhere = query(collection(db, 'api_keys'), where('user_id', '==', user.uid));
+    const unsub = onSnapshot(
+      qWhere,
+      (snapshot) => {
+        const keys = snapshot.docs
+          .map((docItem) => coerceKeyDoc(docItem.id, docItem.data() as Record<string, unknown>))
+          .filter((item) => item.status === 'active')
+          .sort((a, b) => b.created_at - a.created_at);
+
+        setUserKeys(keys);
+        setApiKey((currentKey) => (keys.some((item) => item.key === currentKey) ? currentKey : keys[0]?.key ?? ''));
+        setLoadingKeys(false);
+      },
+      () => {
+        setUserKeys([]);
+        setLoadingKeys(false);
+      },
+    );
+
+    return unsub;
+  }, [user]);
 
   const runGenerate = async () => {
     setLoadingAction('generate');
@@ -843,10 +902,21 @@ function DocsPlaygroundCard() {
     <section className="panel docs-panel">
       <h2>Docs Playground</h2>
       <p>Manual technical tester for request body and raw JSON responses.</p>
-      <div className="playground-grid">
+      <div className="docs-playground-controls">
         <div>
           <label>API Key</label>
-          <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="eg_xxx" />
+          <select value={apiKey} onChange={(event) => setApiKey(event.target.value)}>
+            {loadingKeys && <option value="">Loading keys...</option>}
+            {!loadingKeys && userKeys.length > 0 &&
+              userKeys.map((item) => (
+                <option key={item.id} value={item.key}>
+                  {item.name || item.project || 'API Key'}
+                </option>
+              ))}
+            {!loadingKeys && userKeys.length === 0 && (
+              <option value="">{user ? 'No active API keys' : 'Sign in to use saved keys'}</option>
+            )}
+          </select>
         </div>
         <div>
           <label>Mode</label>
@@ -856,12 +926,12 @@ function DocsPlaygroundCard() {
             <option value="image_to_video">image_to_video</option>
           </select>
         </div>
-        <div className="full">
+        <div className="wide">
           <label>Prompt</label>
           <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
         </div>
         {mode === 'image_to_video' && (
-          <div className="full">
+          <div className="wide">
             <label>Image URL</label>
             <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." />
           </div>
@@ -879,7 +949,22 @@ function DocsPlaygroundCard() {
           {loadingAction === 'download' ? 'Running...' : 'POST /download'}
         </button>
       </div>
-      <pre>{output}</pre>
+      <div className="request-response-grid">
+        <article className="code-panel">
+          <div className="code-panel-head">
+            <span>Request</span>
+            <code>POST /api/generate</code>
+          </div>
+          <pre>{requestPreview}</pre>
+        </article>
+        <article className="code-panel">
+          <div className="code-panel-head">
+            <span>Response</span>
+            <code>JSON</code>
+          </div>
+          <pre>{output}</pre>
+        </article>
+      </div>
     </section>
   );
 }
