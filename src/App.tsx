@@ -579,7 +579,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
 
         <div className={`studio-bar ${barDocked ? 'studio-bar-docked' : ''}`}>
           {userKeys.length > 0 ? (
-            <select value={apiKey} onChange={(event) => setApiKey(event.target.value)} className="key-input">
+            <select value={apiKey} onChange={(event) => setApiKey(event.target.value)} className="key-input key-select">
               {userKeys.map((item) => (
                 <option key={item.id} value={item.key}>
                   {item.name || item.project || 'API Key'}
@@ -866,10 +866,6 @@ function DocsPlaygroundCard() {
             <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." />
           </div>
         )}
-        <div className="full">
-          <label>Job ID</label>
-          <input value={jobId} onChange={(event) => setJobId(event.target.value)} placeholder="from generate" />
-        </div>
       </div>
       <div className="playground-actions">
         <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>

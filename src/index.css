@@ -204,6 +204,22 @@ button {
   min-width: 0;
   outline: none;
 }
+.studio-bar .key-select {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background:
+    linear-gradient(45deg, transparent 50%, #e8f7ff 50%) calc(100% - 18px) center / 6px 6px no-repeat,
+    linear-gradient(135deg, #e8f7ff 50%, transparent 50%) calc(100% - 13px) center / 6px 6px no-repeat,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 24px rgba(0, 0, 0, 0.16);
+  color: #f7fbff;
+  font-weight: 800;
+  padding-right: 2.45rem;
+}
+.studio-bar .key-select option {
+  background: #101923;
+  color: #f7fbff;
+}
 .studio-bar button {
   background: linear-gradient(135deg, #2ee6cd, #37a9ff);
   color: #0c1622;
