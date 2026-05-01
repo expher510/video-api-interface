@@ -1,7 +1,7 @@
 import { extractBearerToken } from './_lib/auth.js';
 import { ApiError } from './_lib/errors.js';
 import { assertEnvFields, getServerEnv } from './_lib/env.js';
-import { validateAndConsumeApiKey } from './_lib/firestore.js';
+import { validateApiKey } from './_lib/firestore.js';
 import { createMediaSignature } from './_lib/media-signing.js';
 import { getRedisValue } from './_lib/redis.js';
 import { getHeader, parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
@@ -123,7 +123,7 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     ]);
     const baseUrl = inferBaseUrl(req, env.pollBaseUrl);
 
-    await validateAndConsumeApiKey(env, apiKey);
+    await validateApiKey(env, apiKey);
 
     const storedRaw = await getRedisValue(env.redisRestUrl, env.redisRestToken, `job:${jobId}`);
     const stored = toStoredStatus(storedRaw);
