@@ -122,6 +122,9 @@ button {
   padding: 1.1rem;
   min-width: 0;
 }
+.stage-view.hidden {
+  display: none;
+}
 
 .panel {
   border: 1px solid var(--line);

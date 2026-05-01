@@ -202,7 +202,9 @@ export default function App() {
       </aside>
 
       <main className="main-stage">
-        {section === 'generate' && <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} />}
+        <div className={section === 'generate' ? 'stage-view' : 'stage-view hidden'}>
+          <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} />
+        </div>
         {section === 'docs' && <ApiDocsView user={user} />}
         {section === 'keys' && (user ? <KeysView user={user} /> : <AuthScreen />)}
       </main>
