@@ -482,7 +482,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
         return;
       }
       setRunStatus('failed');
-      setRunMessage('No job ID returned from /api/generate.');
+      setRunMessage(data?.message || 'No job ID returned from /api/generate.');
       setOutput(JSON.stringify(data, null, 2));
     } catch {
       const fallback = { success: false, message: 'Failed to call /api/generate.' };
@@ -881,6 +881,8 @@ function N8nTutorialComposition() {
 Authorization: Bearer eg_xxx
 
 {
+  "provider": "veo",
+  "aspect_ratio": "landscape",
   "prompt": "Create a cinematic teaser",
   "mode": "video"
 }`
@@ -975,6 +977,8 @@ function N8nTutorialModal({ onClose }: { onClose: () => void }) {
 }
 
 function DocsPlaygroundCard({ user }: { user: User | null }) {
+  const [provider, setProvider] = useState<'meta' | 'veo'>('meta');
+  const [aspectRatio, setAspectRatio] = useState<'landscape' | 'portrait'>('landscape');
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a fashion cinematic intro.');
   const [mode, setMode] = useState<GenerateMode>('video');
@@ -1025,8 +1029,10 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
           Authorization: `Bearer ${apiKey.trim()}`,
         },
         body: JSON.stringify({
+          provider,
           prompt,
           mode,
+          ...(provider === 'veo' ? { aspect_ratio: aspectRatio } : {}),
           ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
         }),
       });
@@ -1081,13 +1087,33 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
           </select>
         </div>
         <div>
+          <label>Provider</label>
+          <select value={provider} onChange={(event) => {
+            const nextProvider = event.target.value as 'meta' | 'veo';
+            setProvider(nextProvider);
+            if (nextProvider === 'veo' && mode !== 'video') setMode('video');
+          }}>
+            <option value="meta">Meta AI</option>
+            <option value="veo">Veo AI</option>
+          </select>
+        </div>
+        <div>
           <label>Mode</label>
           <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
             <option value="video">video</option>
-            <option value="image">image</option>
-            <option value="image_to_video">image_to_video</option>
+            {provider === 'meta' && <option value="image">image</option>}
+            {provider === 'meta' && <option value="image_to_video">image_to_video</option>}
           </select>
         </div>
+        {provider === 'veo' && (
+          <div>
+            <label>Aspect Ratio</label>
+            <select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value as 'landscape' | 'portrait')}>
+              <option value="landscape">Landscape</option>
+              <option value="portrait">Portrait</option>
+            </select>
+          </div>
+        )}
         <div className="wide">
           <label>Prompt</label>
           <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />

@@ -1,4 +1,4 @@
-﻿# EG Autonomous - Secure Video API Console
+# EG Autonomous - Secure Video API Console
 
 A production-ready React + Vercel project for:
 
@@ -48,14 +48,14 @@ Required variables are fully documented in `.env.example`.
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Create a premium product launch cinematic.","mode":"video"}'
+  -d '{"provider":"veo","prompt":"Create a premium product launch cinematic.","mode":"video","aspect_ratio":"landscape"}'
 ```
 
 ```bash
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
   -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Create a futuristic city poster for EG Autonomous.","mode":"image"}'
+  -d '{"provider":"meta","prompt":"Create a futuristic city poster for EG Autonomous.","mode":"image"}'
 ```
 
 ```bash
