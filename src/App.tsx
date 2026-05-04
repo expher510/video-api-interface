@@ -812,48 +812,62 @@ function ApiDocsView({ user }: { user: User | null }) {
           Watch n8n API tutorial
         </button>
         <div className="docs-grid">
-          <article className="panel-lite">
+          <article className="panel-lite wide">
             <h4>POST /api/generate</h4>
-            <p>Start a generation job and get a `job_id`.</p>
-            <pre>{`POST ${API_BASE_URL}/api/generate`}</pre>
-            <pre>{`{
-  "prompt": "Create a premium ad shot",
-  "mode": "video",
-  "image_url": "https://example.com/image.jpg"
-}`}</pre>
-            <pre>{`{
-  "success": true,
-  "job_id": "uuid",
-  "status": "queued"
-}`}</pre>
+            <p>Initiate a generation request. Supports Meta AI (default) and Veo AI.</p>
+            <div className="docs-params">
+              <strong>Body Parameters:</strong>
+              <ul>
+                <li><code>provider</code>: "meta" | "veo" (default: "meta")</li>
+                <li><code>mode</code>: "video" | "image" | "image_to_video" (Veo only supports "video")</li>
+                <li><code>aspect_ratio</code>: "landscape" | "portrait" (Veo only)</li>
+                <li><code>prompt</code>: Text description of the desired media.</li>
+                <li><code>image_url</code>: Required for "image_to_video" (Meta only).</li>
+              </ul>
+            </div>
+            
+            <div className="docs-example-tabs">
+              <div>
+                <h5>Example: Veo AI (Cinematic Video)</h5>
+                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "prompt": "Drone shot of a cyberpunk city",
+    "mode": "video",
+    "aspect_ratio": "landscape"
+  }'`}</pre>
+              </div>
+              <div>
+                <h5>Example: Meta AI (Image to Video)</h5>
+                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "meta",
+    "prompt": "Make it rain in the city",
+    "mode": "image_to_video",
+    "image_url": "https://example.com/city.jpg"
+  }'`}</pre>
+              </div>
+            </div>
           </article>
+
           <article className="panel-lite">
             <h4>POST /api/download</h4>
-            <p>Poll by `job_id` until completed or failed.</p>
-            <pre>{`POST ${API_BASE_URL}/api/download`}</pre>
-            <pre>{`{
-  "job_id": "uuid"
-}`}</pre>
+            <p>Poll results using the <code>job_id</code> returned by the generate endpoint.</p>
+            <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "job_id": "YOUR_JOB_ID" }'`}</pre>
+            <h5>Expected Response:</h5>
             <pre>{`{
   "success": true,
   "status": "completed",
-  "videos": ["https://..."],
-  "images": ["https://..."]
+  "videos": ["https://...mp4"],
+  "images": []
 }`}</pre>
-          </article>
-          <article className="panel-lite">
-            <h4>Copy / Paste cURL - Generate</h4>
-            <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"prompt":"Create a cinematic teaser","mode":"video"}'`}</pre>
-          </article>
-          <article className="panel-lite">
-            <h4>Copy / Paste cURL - Download</h4>
-            <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"job_id":"<job-id-from-generate>"}'`}</pre>
           </article>
         </div>
       </section>

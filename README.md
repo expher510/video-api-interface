@@ -42,27 +42,41 @@ Required variables are fully documented in `.env.example`.
 
 ## API Usage
 
-### 1) Generate content (text, image, video, image_to_video)
+### 1) Generate content (Meta AI or Veo AI)
 
+**Endpoint:** `POST /api/generate`
+
+**Body Parameters:**
+- `provider`: `"meta"` | `"veo"` (default: `"meta"`)
+- `mode`: `"video"` | `"image"` | `"image_to_video"` (Veo only supports `"video"`)
+- `aspect_ratio`: `"landscape"` | `"portrait"` (Veo only)
+- `prompt`: Text description.
+- `image_url`: Required for `"image_to_video"` (Meta only).
+
+**Example: Veo AI Video (Landscape)**
 ```bash
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"provider":"veo","prompt":"Create a premium product launch cinematic.","mode":"video","aspect_ratio":"landscape"}'
+  -d '{
+    "provider": "veo",
+    "prompt": "Cyberpunk city drone shot",
+    "mode": "video",
+    "aspect_ratio": "landscape"
+  }'
 ```
 
+**Example: Meta AI Image to Video**
 ```bash
 curl -X POST https://eg-autonomous.vercel.app/api/generate \
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"provider":"meta","prompt":"Create a futuristic city poster for EG Autonomous.","mode":"image"}'
-```
-
-```bash
-curl -X POST https://eg-autonomous.vercel.app/api/generate \
-  -H "Authorization: Bearer eg_xxxxxxxxxxxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt":"Animate this brand image","mode":"image_to_video","image_url":"https://example.com/image.jpg"}'
+  -d '{
+    "provider": "meta",
+    "prompt": "Animate this scene",
+    "mode": "image_to_video",
+    "image_url": "https://example.com/image.jpg"
+  }'
 ```
 
 ### 2) Poll status / get result
