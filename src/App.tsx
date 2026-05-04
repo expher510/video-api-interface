@@ -305,6 +305,8 @@ function AuthScreen() {
 function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onOpenKeyConsole: () => void }) {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
+  const [provider, setProvider] = useState<'meta' | 'veo'>('meta');
+  const [aspectRatio, setAspectRatio] = useState<'landscape' | 'portrait'>('landscape');
   const [mode, setMode] = useState<GenerateMode>('video');
   const [imageUrl, setImageUrl] = useState('');
   const [jobId, setJobId] = useState('');
@@ -461,8 +463,10 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           Authorization: `Bearer ${apiKey.trim()}`,
         },
         body: JSON.stringify({
+          provider,
           prompt,
           mode,
+          ...(provider === 'veo' ? { aspect_ratio: aspectRatio } : {}),
           ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
         }),
       });
@@ -615,8 +619,30 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           </button>
         </div>
 
+        <div className="studio-modes" style={{ marginBottom: '8px' }}>
+          <button
+            className={provider === 'meta' ? 'active' : ''}
+            onClick={() => setProvider('meta')}
+            type="button"
+          >
+            Meta AI
+          </button>
+          <button
+            className={provider === 'veo' ? 'active' : ''}
+            onClick={() => {
+              setProvider('veo');
+              if (mode !== 'video') setMode('video');
+            }}
+            type="button"
+          >
+            Veo AI
+          </button>
+        </div>
+
         <div className="studio-modes">
-          {(['image', 'video', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
+          {(['image', 'video', 'image_to_video'] as GenerateMode[])
+            .filter((itemMode) => provider === 'meta' || itemMode === 'video')
+            .map((itemMode) => (
             <button
               key={itemMode}
               className={mode === itemMode ? 'active' : ''}
@@ -627,6 +653,25 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
             </button>
           ))}
         </div>
+
+        {provider === 'veo' && (
+          <div className="studio-modes" style={{ marginTop: '8px' }}>
+            <button
+              className={aspectRatio === 'landscape' ? 'active' : ''}
+              onClick={() => setAspectRatio('landscape')}
+              type="button"
+            >
+              Landscape (16:9)
+            </button>
+            <button
+              className={aspectRatio === 'portrait' ? 'active' : ''}
+              onClick={() => setAspectRatio('portrait')}
+              type="button"
+            >
+              Portrait (9:16)
+            </button>
+          </div>
+        )}
 
         {mode === 'image_to_video' && (
           <div className="studio-image-url">
@@ -678,9 +723,11 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
                   {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
                     <div className="card-loading">Regenerating...</div>
                   )}
-                  <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
-                    Re-generate
-                  </button>
+                  {provider === 'meta' && (
+                    <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
+                      Re-generate
+                    </button>
+                  )}
                 </article>
               ))}
             </div>

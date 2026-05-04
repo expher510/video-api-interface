@@ -1,4 +1,4 @@
-﻿import { assertAllowedIp, assertWebhookSecret } from './_lib/auth.js';
+import { assertAllowedIp, assertWebhookSecret } from './_lib/auth.js';
 import { ApiError } from './_lib/errors.js';
 import { assertEnvFields, getServerEnv } from './_lib/env.js';
 import { parseJsonBody, RequestLike, requireMethod, ResponseLike, sendJson, withErrorHandling } from './_lib/http.js';
@@ -14,6 +14,8 @@ type ReceivedVideoBody = {
   text?: string;
   response?: string;
   output_text?: string;
+  video_url?: string;
+  status?: string;
   error?: string;
 };
 
@@ -72,7 +74,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     const payloadRecord = payload as Record<string, unknown>;
 
     let videos = mapUrls(
-      payload.video_urls ??
+      payload.video_url ??
+        payload.video_urls ??
         payloadRecord.videoUrls ??
         payloadRecord.videos ??
         payloadRecord.video_results ??
@@ -126,7 +129,14 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
               : 'video';
 
     const resultCount = videos.length + images.length + (text ? 1 : 0);
-    const isSuccess = payload.success === false ? false : resultCount > 0;
+    const isSuccess =
+      payload.status === 'success'
+        ? true
+        : payload.status === 'failed'
+          ? false
+          : payload.success === false
+            ? false
+            : resultCount > 0;
     const contentLabel = detectedMode === 'image' ? 'Image' : detectedMode === 'text' ? 'Text' : 'Video';
 
     const storedStatus = isSuccess

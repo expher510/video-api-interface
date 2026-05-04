@@ -1,4 +1,4 @@
-﻿import { ApiError } from './errors.js';
+import { ApiError } from './errors.js';
 
 export type ServerEnv = {
   firebaseProjectId: string;
@@ -8,6 +8,9 @@ export type ServerEnv = {
   githubRepo: string;
   githubToken: string;
   githubEventType: string;
+  veoGithubRepo: string;
+  veoGithubToken: string;
+  veoGithubEventType: string;
   redisRestUrl: string;
   redisRestToken: string;
   adminApiToken: string;
@@ -35,6 +38,9 @@ export const getServerEnv = (): ServerEnv => ({
   githubRepo: read('GITHUB_REPO'),
   githubToken: read('GITHUB_TOKEN'),
   githubEventType: read('GITHUB_EVENT_TYPE', 'generate_video'),
+  veoGithubRepo: read('VEO_GITHUB_REPO'),
+  veoGithubToken: read('VEO_GITHUB_TOKEN'),
+  veoGithubEventType: read('VEO_GITHUB_EVENT_TYPE', 'generate_video'),
   redisRestUrl: read('REDIS_REST_URL') || read('UPSTASH_REDIS_REST_URL'),
   redisRestToken: read('REDIS_REST_TOKEN') || read('UPSTASH_REDIS_REST_TOKEN'),
   adminApiToken: read('ADMIN_API_TOKEN'),

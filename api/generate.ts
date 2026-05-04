@@ -1,4 +1,4 @@
-﻿import { randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { extractBearerToken } from './_lib/auth.js';
 import { ApiError } from './_lib/errors.js';
 import { getServerEnv, assertEnvFields } from './_lib/env.js';
@@ -8,9 +8,11 @@ import { parseJsonBody, requireMethod, sendJson, withErrorHandling, RequestLike,
 import { getRedisValue, setRedisValue } from './_lib/redis.js';
 
 type GenerateBody = {
+  provider?: 'meta' | 'veo';
   prompt?: string;
   body?: string;
   mode?: 'text' | 'image' | 'video' | 'image_to_video';
+  aspect_ratio?: 'landscape' | 'portrait';
   image_url?: string;
 };
 
@@ -54,9 +56,19 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     }
 
     const requestBody = parseJsonBody<GenerateBody>(req);
+    const provider = String(requestBody.provider ?? 'meta').trim().toLowerCase();
     const prompt = String(requestBody.prompt ?? requestBody.body ?? '').trim();
     const mode = resolveMode(requestBody.mode);
     const imageUrl = String(requestBody.image_url ?? '').trim();
+    
+    // Map standard aspect ratio to Veo's expected format, defaulting to landscape
+    const veoAspectRatio = requestBody.aspect_ratio === 'portrait' 
+      ? 'VIDEO_ASPECT_RATIO_PORTRAIT' 
+      : 'VIDEO_ASPECT_RATIO_LANDSCAPE';
+
+    if (provider !== 'meta' && provider !== 'veo') {
+      throw new ApiError(400, 'invalid_provider', 'provider must be meta or veo.');
+    }
 
     if (prompt.length < 3) {
       throw new ApiError(400, 'invalid_prompt', 'Prompt must be at least 3 characters.');
@@ -81,15 +93,18 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       'firebasePrivateKey',
       'redisRestUrl',
       'redisRestToken',
-      'githubRepo',
-      'githubToken',
+      provider === 'veo' ? 'veoGithubRepo' : 'githubRepo',
+      provider === 'veo' ? 'veoGithubToken' : 'githubToken',
     ]);
 
     const keyInfo = await validateAndConsumeApiKey(env, apiKey);
-    const cookiesB64 = await getRedisValue(env.redisRestUrl, env.redisRestToken, 'meta_cookies_b64');
-
-    if (!cookiesB64) {
-      throw new ApiError(503, 'cookies_unavailable', 'Meta cookies are not configured. Upload cookies first.');
+    
+    let cookiesB64 = '';
+    if (provider === 'meta') {
+      cookiesB64 = await getRedisValue(env.redisRestUrl, env.redisRestToken, 'meta_cookies_b64') || '';
+      if (!cookiesB64) {
+        throw new ApiError(503, 'cookies_unavailable', 'Meta cookies are not configured. Upload cookies first.');
+      }
     }
 
     const jobId = buildJobId();
@@ -97,18 +112,28 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     const baseUrl = env.pollBaseUrl || inferBaseUrl(req);
     const webhookUrl = baseUrl ? `${baseUrl}/api/received-video` : '/api/received-video';
 
-    await dispatchGithubWorkflow(env.githubRepo, env.githubToken, env.githubEventType, {
-      prompt: workerPrompt,
-      original_prompt: prompt,
-      mode,
-      image_url: imageUrl || undefined,
-      webhook_url: webhookUrl,
-      job_id: jobId,
-      cookies_b64: cookiesB64,
-      project: keyInfo.project,
-      key_name: keyInfo.keyName,
-      requested_by: keyInfo.userId,
-    });
+    if (provider === 'veo') {
+      await dispatchGithubWorkflow(env.veoGithubRepo, env.veoGithubToken, env.veoGithubEventType, {
+        prompt: prompt, // Veo expects the raw prompt
+        aspect_ratio: veoAspectRatio,
+        webhook_url: webhookUrl,
+        job_id: jobId,
+      });
+    } else {
+      await dispatchGithubWorkflow(env.githubRepo, env.githubToken, env.githubEventType, {
+        prompt: workerPrompt,
+        original_prompt: prompt,
+        mode,
+        aspect_ratio: veoAspectRatio, // Pass it to Meta too, just in case they support it in the future
+        image_url: imageUrl || undefined,
+        webhook_url: webhookUrl,
+        job_id: jobId,
+        cookies_b64: cookiesB64,
+        project: keyInfo.project,
+        key_name: keyInfo.keyName,
+        requested_by: keyInfo.userId,
+      });
+    }
 
     await setRedisValue(
       env.redisRestUrl,
