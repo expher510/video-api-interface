@@ -541,9 +541,15 @@ pre {
   border-radius: 16px;
   padding: 0.45rem;
   background: rgba(8, 14, 24, 0.82);
-  aspect-ratio: 9 / 16;
   overflow: hidden;
   position: relative;
+  transition: aspect-ratio 0.3s ease;
+}
+.media-item.landscape {
+  aspect-ratio: 16 / 9;
+}
+.media-item.portrait {
+  aspect-ratio: 9 / 16;
 }
 .regen-btn {
   position: absolute;

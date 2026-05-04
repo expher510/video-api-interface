@@ -710,7 +710,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           {mediaItems.length > 0 && (
             <div className="media-grid">
               {mediaItems.map((item) => (
-                <article key={item.url} className="media-item">
+                <article key={item.url} className={`media-item ${provider === 'veo' ? aspectRatio : 'landscape'}`}>
                   {item.kind === 'video' ? (
                     <video controls src={item.url} preload="metadata" />
                   ) : item.kind === 'image' ? (
