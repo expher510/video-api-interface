@@ -15,6 +15,7 @@ type StoredJobStatus = {
   job_id: string;
   videos?: Array<{ index: number; url: string }>;
   images?: Array<{ index: number; url: string }>;
+  payload?: Record<string, unknown>;
   error?: {
     reason: string;
   };
@@ -59,6 +60,53 @@ const toStoredStatus = (raw: string): StoredJobStatus | null => {
       images: [],
     };
   }
+};
+
+const toStringList = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        return toStringList(JSON.parse(trimmed));
+      } catch {
+        // fallback below
+      }
+    }
+
+    return trimmed
+      .split(/[\n,]/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const mapUrls = (value: unknown) =>
+  toStringList(value)
+    .filter((url) => /^https?:\/\//i.test(url))
+    .map((url, index) => ({ index: index + 1, url }));
+
+const readGeneratedAssets = (stored: StoredJobStatus) => {
+  const src = stored.payload ?? {};
+  const payload = src as Record<string, unknown>;
+
+  const videos =
+    stored.videos ??
+    mapUrls(payload.video_urls ?? payload.videoUrls ?? payload.videos ?? payload.video_url);
+  const images =
+    stored.images ??
+    mapUrls(payload.image_urls ?? payload.imageUrls ?? payload.images);
+
+  return { videos, images };
 };
 
 const forwardSelectedHeaders = (res: ResponseLike, upstream: Response) => {
@@ -157,7 +205,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       throw new ApiError(409, 'job_processing', 'Media is still being generated for this job.');
     }
 
-    const assets = assetType === 'image' ? stored.images ?? [] : stored.videos ?? [];
+    const { videos, images } = readGeneratedAssets(stored);
+    const assets = assetType === 'image' ? images : videos;
     const selected = assets.find((item) => item.index === index);
     if (!selected?.url) {
       throw new ApiError(404, 'asset_not_found', `No ${assetType} found for index ${index}.`);
