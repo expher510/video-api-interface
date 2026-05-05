@@ -7,51 +7,24 @@ import { setRedisValue } from './_lib/redis.js';
 type ReceivedVideoBody = {
   job_id?: string;
   success?: boolean;
-  mode?: 'text' | 'image' | 'video' | 'image_to_video';
-  prompt?: string;
-  video_urls?: string[];
-  image_urls?: string[];
-  text?: string;
-  response?: string;
-  output_text?: string;
-  video_url?: string;
   status?: string;
+  message?: string;
   error?: string;
+  [key: string]: unknown;
 };
 
-const toStringList = (value: unknown): string[] => {
-  if (!value) return [];
-
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+const pickFirstText = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
   }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-
-    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
-      try {
-        return toStringList(JSON.parse(trimmed));
-      } catch {
-        // Continue with comma/new-line split fallback.
-      }
-    }
-
-    return trimmed
-      .split(/[\n,]/g)
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
+  return '';
 };
 
-const mapUrls = (value: unknown) =>
-  toStringList(value)
-    .map((url) => String(url).trim())
-    .filter((url) => /^https?:\/\//i.test(url))
-    .map((url, index) => ({ index: index + 1, url }));
+const isSuccessPayload = (payload: ReceivedVideoBody) => {
+  if (payload.success === true) return true;
+  const status = String(payload.status ?? '').trim().toLowerCase();
+  return status === 'success' || status === 'completed';
+};
 
 export default async function handler(req: RequestLike, res: ResponseLike) {
   await withErrorHandling(res, async () => {
@@ -70,99 +43,26 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       throw new ApiError(400, 'missing_job_id', 'job_id is required.');
     }
 
-    const mode = String(payload.mode ?? '').trim().toLowerCase();
     const payloadRecord = payload as Record<string, unknown>;
-
-    let videos = mapUrls(
-      payload.video_url ??
-        payload.video_urls ??
-        payloadRecord.videoUrls ??
-        payloadRecord.videos ??
-        payloadRecord.video_results ??
-        payloadRecord.videoResults,
-    );
-    let images = mapUrls(
-      payload.image_urls ??
-        payloadRecord.imageUrls ??
-        payloadRecord.images ??
-        payloadRecord.image_results ??
-        payloadRecord.imageResults,
+    const ok = isSuccessPayload(payload);
+    const message = pickFirstText(
+      payload.message,
+      payload.error,
+      payloadRecord.errorMessage,
+      payloadRecord.error_message,
+      payloadRecord.reason,
+      payloadRecord.msg,
+      payloadRecord.response,
     );
 
-    // Some workers return generic URL fields.
-    const fallbackUrls = mapUrls(
-      payloadRecord.urls ?? payloadRecord.output_urls ?? payloadRecord.outputUrls ?? payloadRecord.media_urls ?? payloadRecord.mediaUrls,
-    );
-    if (videos.length === 0 && images.length === 0 && fallbackUrls.length > 0) {
-      if (mode === 'image') {
-        images = fallbackUrls;
-      } else {
-        videos = fallbackUrls;
-      }
-    }
-
-    if (mode === 'image' && images.length === 0 && videos.length > 0) {
-      images = videos;
-      videos = [];
-    }
-
-    const text = String(
-      payload.output_text ??
-        payload.response ??
-        payload.text ??
-        payloadRecord.output ??
-        payloadRecord.result ??
-        payloadRecord.generated_text ??
-        payloadRecord.generatedText ??
-        '',
-    ).trim();
-
-    const detectedMode =
-      mode === 'text' || mode === 'image' || mode === 'video' || mode === 'image_to_video'
-        ? mode
-        : videos.length > 0
-          ? 'video'
-          : images.length > 0
-            ? 'image'
-            : text
-              ? 'text'
-              : 'video';
-
-    const resultCount = videos.length + images.length + (text ? 1 : 0);
-    const isSuccess =
-      payload.status === 'success'
-        ? true
-        : payload.status === 'failed'
-          ? false
-          : payload.success === false
-            ? false
-            : resultCount > 0;
-    const contentLabel = detectedMode === 'image' ? 'Image' : detectedMode === 'text' ? 'Text' : 'Video';
-
-    const storedStatus = isSuccess
-      ? {
-          success: true,
-          state: 'completed',
-          mode: detectedMode,
-          job_id: jobId,
-          message: `${contentLabel} generated successfully.`,
-          prompt: String(payload.prompt ?? ''),
-          videos,
-          images,
-          text: text || undefined,
-          timestamp: new Date().toISOString(),
-        }
-      : {
-          success: false,
-          state: 'failed',
-          mode: detectedMode,
-          job_id: jobId,
-          message: `${contentLabel} generation failed.`,
-          error: {
-            reason: String(payload.error ?? 'Unknown upstream failure'),
-          },
-          timestamp: new Date().toISOString(),
-        };
+    const storedStatus = {
+      success: ok,
+      state: ok ? 'completed' : 'failed',
+      job_id: jobId,
+      message: message || (ok ? 'Generation completed successfully.' : 'Generation failed.'),
+      payload,
+      timestamp: new Date().toISOString(),
+    };
 
     await setRedisValue(env.redisRestUrl, env.redisRestToken, `job:${jobId}`, JSON.stringify(storedStatus), 60 * 60 * 24);
 

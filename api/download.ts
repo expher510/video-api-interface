@@ -11,10 +11,10 @@ type DownloadBody = {
 };
 
 type StoredJobStatus = {
-  success: boolean;
-  state: 'queued' | 'processing' | 'completed' | 'failed';
+  success?: boolean;
+  state?: 'queued' | 'processing' | 'completed' | 'failed';
   mode?: 'text' | 'image' | 'video' | 'image_to_video';
-  job_id: string;
+  job_id?: string;
   message?: string;
   videos?: Array<{ index: number; url: string }>;
   images?: Array<{ index: number; url: string }>;
@@ -22,6 +22,7 @@ type StoredJobStatus = {
   error?: {
     reason: string;
   };
+  payload?: Record<string, unknown>;
   timestamp?: string;
 };
 
@@ -74,25 +75,74 @@ const toStoredStatus = (raw: string): StoredJobStatus | null => {
   if (!raw) return null;
 
   try {
-    return JSON.parse(raw) as StoredJobStatus;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as StoredJobStatus;
   } catch {
-    const urls = raw
-      .replace(/^"/, '')
-      .replace(/"$/, '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    if (urls.length === 0) return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
 
     return {
-      success: true,
-      state: 'completed',
-      job_id: '',
-      videos: urls.map((url, index) => ({ index: index + 1, url })),
+      success: false,
+      state: 'failed',
+      message: trimmed,
+      error: { reason: trimmed },
       timestamp: new Date().toISOString(),
     };
   }
+};
+
+const toStringList = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        return toStringList(JSON.parse(trimmed));
+      } catch {
+        // fallback below
+      }
+    }
+
+    return trimmed
+      .split(/[\n,]/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const mapUrls = (value: unknown) =>
+  toStringList(value)
+    .filter((url) => /^https?:\/\//i.test(url))
+    .map((url, index) => ({ index: index + 1, url }));
+
+const readGeneratedContent = (stored: StoredJobStatus) => {
+  const src = stored.payload ?? {};
+  const videos =
+    stored.videos ??
+    mapUrls((src as Record<string, unknown>).video_urls ?? (src as Record<string, unknown>).videoUrls ?? (src as Record<string, unknown>).videos ?? (src as Record<string, unknown>).video_url);
+  const images =
+    stored.images ??
+    mapUrls((src as Record<string, unknown>).image_urls ?? (src as Record<string, unknown>).imageUrls ?? (src as Record<string, unknown>).images);
+  const text =
+    stored.text ??
+    String(
+      (src as Record<string, unknown>).text ??
+        (src as Record<string, unknown>).output_text ??
+        (src as Record<string, unknown>).response ??
+        '',
+    ).trim();
+
+  return { videos, images, text };
 };
 
 export default async function handler(req: RequestLike, res: ResponseLike) {
@@ -131,18 +181,18 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     if (!stored) {
       sendJson(res, 200, {
         success: true,
-        state: 'processing',
+        state: 'queued',
         job_id: jobId,
-        message: 'Video is still being generated.',
+        message: 'Video generation job is queued.',
         retry_after: 10,
       });
       return;
     }
 
-    if (stored.state === 'completed') {
-      const videos = stored.videos ?? [];
-      const images = stored.images ?? [];
-      const text = stored.text ?? '';
+    const state = stored.state ?? (stored.success === true ? 'completed' : stored.success === false ? 'failed' : 'processing');
+
+    if (state === 'completed') {
+      const { videos, images, text } = readGeneratedContent(stored);
       const count = videos.length + images.length + (text ? 1 : 0);
       const ttlSeconds = Math.min(Math.max(env.mediaSignedUrlTtlSeconds, 60), 60 * 60 * 24);
       const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
@@ -171,14 +221,15 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       return;
     }
 
-    if (stored.state === 'failed') {
+    if (state === 'failed') {
+      const reason = stored.error?.reason ?? stored.message ?? 'Unknown error';
       sendJson(res, 200, {
         success: false,
         state: 'failed',
         mode: stored.mode ?? 'video',
         job_id: jobId,
         message: stored.message ?? 'Generation failed.',
-        error: stored.error ?? { reason: 'Unknown error' },
+        error: { reason },
         timestamp: stored.timestamp ?? new Date().toISOString(),
       });
       return;
@@ -186,10 +237,11 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
 
     sendJson(res, 200, {
       success: true,
-      state: stored.state,
+      state,
       job_id: jobId,
       message: stored.message ?? 'Video is being processed.',
       retry_after: 10,
+      timestamp: stored.timestamp ?? new Date().toISOString(),
     });
   });
 }
