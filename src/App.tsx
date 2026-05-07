@@ -18,7 +18,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video, Zap, Sparkles, Film, ShoppingCart, Megaphone, Share2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Player } from '@remotion/player';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
@@ -800,75 +800,663 @@ function ApiDocsView({ user }: { user: User | null }) {
   return (
     <div className="docs-layout">
       <section className="panel docs-panel">
-        <h2>
-          <ShieldCheck size={18} /> API Docs
-        </h2>
-        <p>Use Bearer API keys from Key Console. Copy the production URL directly into your app or automation flow.</p>
+        {/* Documentation Header */}
+        <div className="docs-header">
+          <div className="docs-header-icon">
+            <Zap size={24} />
+          </div>
+          <div className="docs-header-content">
+            <h1>API Documentation</h1>
+            <p>Powerful, scalable video generation API for developers. Create stunning videos, images, and video transformations in seconds using our cutting-edge AI models.</p>
+          </div>
+        </div>
+
+        {/* Quick Start Section */}
+        <div className="quickstart-section">
+          <h3>Quick Start in 3 Steps</h3>
+          <div className="quickstart-steps">
+            <div className="quickstart-step">
+              <div className="step-number">1</div>
+              <h4>Get API Key</h4>
+              <p>Create a free account and generate your Bearer token from the Key Console.</p>
+            </div>
+            <div className="quickstart-step">
+              <div className="step-number">2</div>
+              <h4>Send Request</h4>
+              <p>POST to /api/generate with your prompt and desired mode (video, image, or transform).</p>
+            </div>
+            <div className="quickstart-step">
+              <div className="step-number">3</div>
+              <h4>Poll Results</h4>
+              <p>Use /api/download with the returned job_id to check status and retrieve files.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Production Base URL */}
         <div className="base-url-card">
           <span>Production Base URL</span>
           <code>{API_BASE_URL}</code>
         </div>
+
+        {/* Tutorial Button */}
         <button type="button" className="tutorial-launch-card" onClick={() => setTutorialOpen(true)}>
-          Watch n8n API tutorial
+          <Video size={16} /> Watch n8n Integration Tutorial
         </button>
-        <div className="docs-grid">
-          <article className="panel-lite wide">
-            <h4>POST /api/generate</h4>
-            <p>Initiate a generation request. Supports Meta AI (default) and Veo AI.</p>
-            <div className="docs-params">
-              <strong>Body Parameters:</strong>
-              <ul>
-                <li><code>provider</code>: "meta" | "veo" (default: "meta")</li>
-                <li><code>mode</code>: "video" | "image" | "image_to_video" (Veo only supports "video")</li>
-                <li><code>aspect_ratio</code>: "landscape" | "portrait" (Veo only)</li>
-                <li><code>prompt</code>: Text description of the desired media.</li>
-                <li><code>image_url</code>: Required for "image_to_video" (Meta only).</li>
-              </ul>
+
+        {/* Endpoint 1: Generate */}
+        <div className="endpoint-card">
+          <div className="endpoint-header">
+            <div className="endpoint-method post">POST</div>
+            <div className="endpoint-path">
+              <h3>/api/generate</h3>
+              <p>Initiate a new video, image, or video transformation request</p>
             </div>
+          </div>
+
+          <div className="provider-badges">
+            <span className="provider-badge meta">
+              <Sparkles size={14} /> Meta AI
+            </span>
+            <span className="provider-badge veo">
+              <Sparkles size={14} /> Veo AI
+            </span>
+          </div>
+
+          {/* Parameters */}
+          <div className="params-section">
+            <h4>Request Body Parameters</h4>
+            <div className="param-list">
+              <div className="param-item">
+                <div>
+                  <div className="param-name">provider <span className="param-required">required</span></div>
+                  <div className="param-description">AI provider for generation</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">mode <span className="param-required">required</span></div>
+                  <div className="param-description">Generation type: video, image, or image_to_video (Veo supports video only)</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">prompt <span className="param-required">required</span></div>
+                  <div className="param-description">Detailed text description of desired output. Be specific for best results.</div>
+                </div>
+                <span className="param-type">string</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">aspect_ratio</div>
+                  <div className="param-description">Output aspect ratio (landscape or portrait). Veo AI only. Default: landscape</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">image_url</div>
+                  <div className="param-description">Source image URL for image_to_video mode. Meta AI only, required when mode is image_to_video.</div>
+                </div>
+                <span className="param-type">string</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Codes */}
+          <div className="status-codes">
+            <h4>Response Status Codes</h4>
+            <div className="status-list">
+              <div className="status-item success">
+                <span className="status-code">200</span>
+                <span className="status-description">Successfully queued generation job</span>
+              </div>
+              <div className="status-item info">
+                <span className="status-code">400</span>
+                <span className="status-description">Invalid parameters or missing required fields</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">401</span>
+                <span className="status-description">Invalid or expired API key</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">429</span>
+                <span className="status-description">Rate limit exceeded</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Code Examples */}
+          <div className="code-examples-section">
+            <h4>Code Examples</h4>
             
-            <div className="docs-example-tabs">
-              <div>
-                <h5>Example: Veo AI (Cinematic Video)</h5>
-                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+            <div className="code-example">
+              <h5>Veo AI: Cinematic Video</h5>
+              <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "provider": "veo",
-    "prompt": "Drone shot of a cyberpunk city",
     "mode": "video",
-    "aspect_ratio": "landscape"
+    "aspect_ratio": "landscape",
+    "prompt": "A futuristic drone shot flying through a neon-lit cyberpunk cityscape at night"
   }'`}</pre>
-              </div>
-              <div>
-                <h5>Example: Meta AI (Image to Video)</h5>
-                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+            </div>
+
+            <div className="code-example">
+              <h5>Meta AI: Image to Video</h5>
+              <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "provider": "meta",
-    "prompt": "Make it rain in the city",
     "mode": "image_to_video",
-    "image_url": "https://example.com/city.jpg"
+    "image_url": "https://example.com/landscape.jpg",
+    "prompt": "The landscape comes alive with weather effects - rain starts falling, wind moves trees"
   }'`}</pre>
+            </div>
+          </div>
+        </div>
+
+        {/* Endpoint 2: Download */}
+        <div className="endpoint-card">
+          <div className="endpoint-header">
+            <div className="endpoint-method post">POST</div>
+            <div className="endpoint-path">
+              <h3>/api/download</h3>
+              <p>Poll generation status and retrieve completed media files</p>
+            </div>
+          </div>
+
+          {/* Parameters */}
+          <div className="params-section">
+            <h4>Request Body Parameters</h4>
+            <div className="param-list">
+              <div className="param-item">
+                <div>
+                  <div className="param-name">job_id <span className="param-required">required</span></div>
+                  <div className="param-description">Unique identifier returned from /api/generate endpoint. Use this to track your generation job.</div>
+                </div>
+                <span className="param-type">string</span>
               </div>
             </div>
-          </article>
+          </div>
 
-          <article className="panel-lite">
-            <h4>POST /api/download</h4>
-            <p>Poll results using the <code>job_id</code> returned by the generate endpoint.</p>
+          {/* Status Codes */}
+          <div className="status-codes">
+            <h4>Response Status Codes</h4>
+            <div className="status-list">
+              <div className="status-item success">
+                <span className="status-code">200</span>
+                <span className="status-description">Job status retrieved (queued, processing, completed, or failed)</span>
+              </div>
+              <div className="status-item info">
+                <span className="status-code">404</span>
+                <span className="status-description">Job ID not found</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">401</span>
+                <span className="status-description">Invalid or expired API key</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Code Examples */}
+          <div className="code-examples-section">
+            <h4>Code Example</h4>
             <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{ "job_id": "YOUR_JOB_ID" }'`}</pre>
-            <h5>Expected Response:</h5>
-            <pre>{`{
+  -d '{
+    "job_id": "abc123def456"
+  }'
+
+# Response when completed:
+{
   "success": true,
   "status": "completed",
-  "videos": ["https://...mp4"],
-  "images": []
+  "videos": ["https://cdn.example.com/video_12345.mp4"],
+  "images": ["https://cdn.example.com/image_12345.png"]
 }`}</pre>
-          </article>
+          </div>
+        </div>
+
+        {/* Use Cases Section */}
+        <div className="usecases-section">
+          <div className="usecases-header">
+            <h2>Real-World Use Cases</h2>
+            <p className="usecases-subtitle">Explore comprehensive examples for common and advanced scenarios</p>
+          </div>
+
+          {/* E-Commerce Use Case */}
+          <div className="usecase-detailed">
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <ShoppingCart size={18} />
+                </div>
+                <h4 className="usecase-title">E-Commerce Product Showcase</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate product showcase videos automatically for your catalog. Create engaging demonstrations that increase conversion rates and reduce return rates. Perfect for scaling video production across thousands of SKUs.</p>
+                
+                <div className="usecase-subsection">
+                  <h5>Basic Example: Fashion Product Video</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "mode": "video",
+    "aspect_ratio": "landscape",
+    "prompt": "Luxury designer sneaker product showcase. Rotating 360 view on clean white background with soft lighting, showing details of materials and craftsmanship"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Advanced Example: Image-to-Video Product Animation</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "meta",
+    "mode": "image_to_video",
+    "image_url": "https://cdn.example.com/products/handbag-main.jpg",
+    "prompt": "Animate the leather texture with subtle movement, showcase the clasp opening and closing, show interior compartments. Professional product photography style"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Code Integration Example (Node.js)</h5>
+                  <pre>{`const generateProductVideo = async (product) => {
+  const response = await fetch('https://api.example.com/api/generate', {
+    method: 'POST',
+    headers: {
+      'Authorization': \`Bearer \${process.env.API_KEY}\`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      provider: 'veo',
+      mode: 'video',
+      aspect_ratio: 'landscape',
+      prompt: \`\${product.name} - \${product.description}. Professional showcase with \${product.features.join(', ')}\`
+    })
+  });
+  
+  const { job_id } = await response.json();
+  
+  // Poll for completion
+  let completed = false;
+  while (!completed) {
+    const statusRes = await fetch('https://api.example.com/api/download', {
+      method: 'POST',
+      headers: {
+        'Authorization': \`Bearer \${process.env.API_KEY}\`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ job_id })
+    });
+    
+    const { status, videos } = await statusRes.json();
+    if (status === 'completed') {
+      return videos[0];
+    }
+    
+    await new Promise(r => setTimeout(r, 5000));
+  }
+};`}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Entertainment Use Case */}
+          <div className="usecase-detailed">
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Film size={18} />
+                </div>
+                <h4 className="usecase-title">Entertainment & Filmmaking</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Create cinematic trailers, scenes, and visual effects for film projects. Perfect for concept validation, storyboarding, rapid prototyping, and visual effects generation. Speed up pre-production and reduce costs significantly.</p>
+                
+                <div className="usecase-subsection">
+                  <h5>Scene Generation: Action Sequence</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "mode": "video",
+    "aspect_ratio": "landscape",
+    "prompt": "High-energy superhero action sequence. Multiple explosions, dynamic camera movements, vibrant colors, cinematic lighting. Hero character performing acrobatic combat moves against futuristic backdrop"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Trailer Generation: Movie Teaser</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "mode": "video",
+    "aspect_ratio": "landscape",
+    "prompt": "Sci-fi thriller movie trailer. Dark atmospheric cityscape with neon lights, mysterious figure in shadows, dramatic music beats synchronized with quick cuts, lens flares, title reveals"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Python Implementation: Batch Scene Generation</h5>
+                  <pre>{`import requests
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+class FilmGenAPI:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = 'https://api.example.com'
+    
+    def generate_scene(self, scene_description, aspect_ratio='landscape'):
+        """Generate a single scene"""
+        response = requests.post(
+            f'{self.base_url}/api/generate',
+            headers={
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'provider': 'veo',
+                'mode': 'video',
+                'aspect_ratio': aspect_ratio,
+                'prompt': scene_description
+            }
+        )
+        return response.json()['job_id']
+    
+    def poll_result(self, job_id, max_wait=300):
+        """Poll until scene is ready"""
+        start_time = time.time()
+        while time.time() - start_time < max_wait:
+            response = requests.post(
+                f'{self.base_url}/api/download',
+                headers={
+                    'Authorization': f'Bearer {self.api_key}',
+                    'Content-Type': 'application/json'
+                },
+                json={'job_id': job_id}
+            )
+            data = response.json()
+            
+            if data['status'] == 'completed':
+                return data['videos'][0]
+            
+            time.sleep(3)
+        
+        raise TimeoutError(f'Scene generation timed out for job {job_id}')
+    
+    def generate_multiple_scenes(self, scenes):
+        """Generate multiple scenes in parallel"""
+        job_ids = [self.generate_scene(scene) for scene in scenes]
+        
+        results = {}
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self.poll_result, jid): jid 
+                for jid in job_ids
+            }
+            for future in futures:
+                video_url = future.result()
+                results[futures[future]] = video_url
+        
+        return results
+
+# Usage
+api = FilmGenAPI('your_api_key')
+scenes = [
+    'Establishing shot of dystopian city skyline at sunset',
+    'Hero walking through rain-soaked streets with neon reflections',
+    'Climactic confrontation with antagonist in abandoned warehouse'
+]
+
+videos = api.generate_multiple_scenes(scenes)
+for job_id, video_url in videos.items():
+    print(f'Scene {job_id}: {video_url}')`}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Marketing Use Case */}
+          <div className="usecase-detailed">
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Megaphone size={18} />
+                </div>
+                <h4 className="usecase-title">Marketing & Advertising</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate campaign videos at scale for social media and advertising. Create personalized content for different audience segments without expensive production teams. Reduce time-to-market from weeks to minutes.</p>
+                
+                <div className="usecase-subsection">
+                  <h5>Campaign: Brand Animation</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "meta",
+    "mode": "image_to_video",
+    "image_url": "https://cdn.example.com/brand-logo.png",
+    "prompt": "Animate brand logo with dynamic motion graphics. Colors morph and flow, particles orbit the logo, modern tech aesthetic with smooth transitions"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Personalized A/B Testing Campaign</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "mode": "video",
+    "aspect_ratio": "portrait",
+    "prompt": "Lifestyle advertisement showing young professionals using SaaS platform. Modern office environment, collaborative workspace, diverse team members, sleek UI elements, motivational tone"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Batch Campaign Generation (Python)</h5>
+                  <pre>{`import requests
+import json
+
+class MarketingCampaignGenerator:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.base_url = 'https://api.example.com'
+    
+    def generate_campaign_variations(self, brand_data, audience_segments):
+        """Generate multiple campaign variations for different audiences"""
+        campaigns = []
+        
+        for segment in audience_segments:
+            # Customize prompt based on audience
+            prompt = self._build_audience_prompt(brand_data, segment)
+            
+            job_id = self._generate_video(prompt, segment.get('aspect_ratio', 'landscape'))
+            campaigns.append({
+                'job_id': job_id,
+                'segment': segment['name'],
+                'audience': segment['description']
+            })
+        
+        return campaigns
+    
+    def _build_audience_prompt(self, brand_data, segment):
+        """Build tailored prompt for audience segment"""
+        base = f"Brand: {brand_data['name']}. {brand_data['description']}. "
+        
+        if segment['type'] == 'young_professionals':
+            return base + "Target audience: ambitious young professionals aged 25-35. Show modern career growth, tech integration, success stories. Energetic vibe with contemporary aesthetics."
+        
+        elif segment['type'] == 'families':
+            return base + "Target audience: families with children. Emphasize trust, safety, warmth. Show family bonding moments, practical benefits. Friendly and welcoming tone."
+        
+        elif segment['type'] == 'enterprise':
+            return base + "Target audience: enterprise decision makers. Focus on scalability, security, ROI. Professional corporate setting, leadership themes."
+        
+        return base
+    
+    def _generate_video(self, prompt, aspect_ratio='landscape'):
+        """Make API call to generate video"""
+        response = requests.post(
+            f'{self.base_url}/api/generate',
+            headers={
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'provider': 'veo',
+                'mode': 'video',
+                'aspect_ratio': aspect_ratio,
+                'prompt': prompt
+            }
+        )
+        return response.json()['job_id']
+
+# Example usage
+generator = MarketingCampaignGenerator('your_api_key')
+
+brand = {
+    'name': 'TechFlow',
+    'description': 'Next-generation productivity platform'
+}
+
+segments = [
+    {
+        'name': 'Young Professionals',
+        'type': 'young_professionals',
+        'description': 'LinkedIn demographic',
+        'aspect_ratio': 'landscape'
+    },
+    {
+        'name': 'Families',
+        'type': 'families',
+        'description': 'Facebook demographic',
+        'aspect_ratio': 'landscape'
+    }
+]
+
+campaigns = generator.generate_campaign_variations(brand, segments)
+print(json.dumps(campaigns, indent=2))`}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Social Media Use Case */}
+          <div className="usecase-detailed">
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Share2 size={18} />
+                </div>
+                <h4 className="usecase-title">Social Media Content Creation</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate viral-worthy content tailored to platform-specific formats. Create short-form videos optimized for TikTok, Instagram Reels, and YouTube Shorts instantly. Scale content production without increasing team size.</p>
+                
+                <div className="usecase-subsection">
+                  <h5>TikTok Format: Vertical Short-Form Video</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "meta",
+    "mode": "video",
+    "aspect_ratio": "portrait",
+    "prompt": "Fast-paced trending TikTok dance challenge. Trendy music sync, quick cuts, vibrant colors, trending hashtag aesthetic. Young, energetic, fun vibe. Quick transitions with effects"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Instagram Reel: Lifestyle Content</h5>
+                  <pre>{`curl -X POST https://api.example.com/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "provider": "veo",
+    "mode": "video",
+    "aspect_ratio": "portrait",
+    "prompt": "Instagram Reel lifestyle video. Morning routine montage with aesthetic cinematography, natural lighting, smooth transitions, relatable moments, inspirational vibe"
+  }'`}</pre>
+                </div>
+
+                <div className="usecase-subsection">
+                  <h5>Content Calendar Generator (JavaScript)</h5>
+                  <pre>{`async function generateContentCalendar(apiKey, contentStrategy) {
+  const platforms = {
+    tiktok: { aspect_ratio: 'portrait', duration: 'short' },
+    instagram: { aspect_ratio: 'portrait', duration: 'short' },
+    youtube: { aspect_ratio: 'landscape', duration: 'medium' }
+  };
+  
+  const contentPlan = [];
+  
+  for (const week of contentStrategy.weeks) {
+    for (const day of week.days) {
+      for (const platform of Object.keys(platforms)) {
+        const config = platforms[platform];
+        
+        const prompt = buildPrompt(day.topic, platform, day.style);
+        
+        const response = await fetch('https://api.example.com/api/generate', {
+          method: 'POST',
+          headers: {
+            'Authorization': \`Bearer \${apiKey}\`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            provider: 'meta',
+            mode: 'video',
+            aspect_ratio: config.aspect_ratio,
+            prompt: prompt
+          })
+        });
+        
+        const { job_id, status } = await response.json();
+        
+        contentPlan.push({
+          date: day.date,
+          platform,
+          topic: day.topic,
+          job_id,
+          status
+        });
+      }
+    }
+  }
+  
+  return contentPlan;
+}
+
+function buildPrompt(topic, platform, style) {
+  const platformTips = {
+    tiktok: 'Fast-paced, trending aesthetic, viral potential',
+    instagram: 'Aesthetic, polished, story-telling focused',
+    youtube: 'Comprehensive, engaging thumbnails, high production value'
+  };
+  
+  return \`\${topic}. Platform: \${platform}. Style: \${style}. Tips: \${platformTips[platform]}\`;
+}`}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       <DocsPlaygroundCard user={user} />
@@ -1080,10 +1668,49 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
     }
   };
 
+  const applyPreset = (presetType: string) => {
+    switch (presetType) {
+      case 'veo-cinematic':
+        setProvider('veo');
+        setMode('video');
+        setAspectRatio('landscape');
+        setPrompt('Epic cinematic shot of a futuristic city skyline at sunset');
+        break;
+      case 'meta-image':
+        setProvider('meta');
+        setMode('image');
+        setPrompt('Generate a stunning landscape photograph');
+        break;
+      case 'meta-i2v':
+        setProvider('meta');
+        setMode('image_to_video');
+        setImageUrl('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800');
+        setPrompt('Animate this mountain landscape with dramatic weather and lighting changes');
+        break;
+    }
+  };
+
   return (
     <section className="panel docs-panel">
-      <h2>Docs Playground</h2>
-      <p>Manual technical tester for request body and raw JSON responses.</p>
+      <div className="docs-playground-header">
+        <h3>Interactive API Playground</h3>
+        <p>Test API requests in real-time. Configure parameters, send requests, and see live responses from our AI models.</p>
+      </div>
+
+      {/* Preset Buttons */}
+      <div className="preset-buttons">
+        <button className="preset-btn" onClick={() => applyPreset('veo-cinematic')}>
+          Veo Cinematic
+        </button>
+        <button className="preset-btn" onClick={() => applyPreset('meta-image')}>
+          Meta Image
+        </button>
+        <button className="preset-btn" onClick={() => applyPreset('meta-i2v')}>
+          Image-to-Video
+        </button>
+      </div>
+
+      {/* Request Controls */}
       <div className="docs-playground-controls">
         <div>
           <label>API Key</label>
@@ -1130,32 +1757,43 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         )}
         <div className="wide">
           <label>Prompt</label>
-          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Describe what you want to generate..." />
         </div>
         {mode === 'image_to_video' && (
           <div className="wide">
             <label>Image URL</label>
-            <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." />
+            <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://example.com/image.jpg" />
           </div>
         )}
       </div>
+
+      {/* Action Buttons */}
       <div className="playground-actions">
         <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
-          {loadingAction === 'generate' ? 'Running...' : 'POST /generate'}
+          {loadingAction === 'generate' ? 'Generating...' : 'POST /api/generate'}
         </button>
         <button
           className="secondary"
           onClick={runDownload}
           disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
         >
-          {loadingAction === 'download' ? 'Running...' : 'POST /download'}
+          {loadingAction === 'download' ? 'Downloading...' : 'POST /api/download'}
         </button>
       </div>
+
+      {/* Response Display */}
+      {jobId && (
+        <div className="response-status success">
+          <span className="status-dot"></span>
+          <span>Job ID: <strong>{jobId.slice(0, 12)}...</strong></span>
+        </div>
+      )}
+
       <div className="request-response-grid response-only-grid">
         <article className="code-panel">
           <div className="code-panel-head">
-            <span>Response</span>
-            <code>JSON</code>
+            <span>JSON Response</span>
+            <code>200</code>
           </div>
           <pre>{output}</pre>
         </article>
