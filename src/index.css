@@ -1626,6 +1626,25 @@ th { text-align: left; color: var(--text-soft); font-size: 0.7rem; text-transfor
   border-top: 2px solid var(--line);
 }
 
+.usecases-header {
+  margin-bottom: 2rem;
+}
+
+.usecases-header h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.usecases-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-soft);
+  max-width: 600px;
+  line-height: 1.6;
+}
+
 .usecases-section h2 {
   margin: 0 0 1.5rem 0;
   font-size: 1.4rem;
@@ -1639,12 +1658,25 @@ th { text-align: left; color: var(--text-soft); font-size: 0.7rem; text-transfor
   gap: 1.5rem;
 }
 
+.usecase-detailed {
+  margin-bottom: 2.5rem;
+}
+
 .usecase-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
   background: var(--panel);
   transition: all 0.3s ease;
+}
+
+.usecase-detailed .usecase-card {
+  box-shadow: 0 2px 8px rgba(42, 42, 42, 0.06);
+}
+
+.usecase-detailed .usecase-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 12px 32px rgba(155, 168, 150, 0.15);
 }
 
 .usecase-card:hover {
@@ -1679,14 +1711,40 @@ th { text-align: left; color: var(--text-soft); font-size: 0.7rem; text-transfor
 }
 
 .usecase-body {
-  padding: 1.25rem;
+  padding: 1.5rem;
 }
 
 .usecase-description {
-  margin: 0 0 1rem 0;
-  font-size: 0.9rem;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
   color: var(--text-soft);
-  line-height: 1.6;
+  line-height: 1.7;
+}
+
+.usecase-subsection {
+  margin-bottom: 1.5rem;
+}
+
+.usecase-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.usecase-subsection h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.usecase-subsection h5::before {
+  content: '';
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .usecase-example {
@@ -1699,6 +1757,21 @@ th { text-align: left; color: var(--text-soft); font-size: 0.7rem; text-transfor
   color: var(--text-main);
   overflow-x: auto;
   margin-top: 0.75rem;
+}
+
+.usecase-subsection pre {
+  background: var(--bg-soft);
+  border-left: 3px solid var(--accent);
+  padding: 1rem;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-main);
+  overflow-x: auto;
+  margin: 0.75rem 0 0 0;
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 /* Quickstart Guide */
@@ -1966,6 +2039,152 @@ th { text-align: left; color: var(--text-soft); font-size: 0.7rem; text-transfor
 .response-status svg {
   display: inline-block;
   margin-right: 0.5rem;
+}
+
+/* Enhanced Visual Hierarchy & Typography */
+.docs-panel section {
+  margin-bottom: 2rem;
+}
+
+.docs-panel h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 2rem 0 1rem;
+  padding-top: 1rem;
+  color: var(--text-main);
+  border-top: 1px solid var(--line);
+}
+
+.docs-panel h2:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.docs-panel h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--text-main);
+}
+
+.docs-panel h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.docs-panel h5 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.5rem;
+  color: var(--text-main);
+}
+
+.docs-panel p {
+  margin: 0 0 1rem;
+  line-height: 1.7;
+  color: var(--text-soft);
+}
+
+.docs-panel strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+/* Section Dividers */
+.section-divider {
+  height: 2px;
+  background: linear-gradient(90deg, var(--line) 0%, transparent 50%, var(--line) 100%);
+  margin: 2.5rem 0;
+  border: none;
+}
+
+/* Enhanced Code Block Styling */
+.usecase-subsection pre {
+  position: relative;
+  background: var(--bg-soft);
+  border-left: 4px solid var(--accent);
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Code language indicator */
+.usecase-subsection pre::before {
+  content: 'Code';
+  position: sticky;
+  top: 0;
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Scrollbar styling for code blocks */
+.usecase-subsection pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.usecase-subsection pre::-webkit-scrollbar-track {
+  background: var(--bg-soft);
+  border-radius: 4px;
+}
+
+.usecase-subsection pre::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.usecase-subsection pre::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-2);
+}
+
+/* Documentation list styling */
+.docs-panel ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.docs-panel li {
+  margin-bottom: 0.5rem;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.docs-panel li code {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 0.8rem;
+}
+
+/* Inline code styling */
+.docs-panel code:not(pre code) {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  color: var(--accent);
+  font-size: 0.85em;
+  font-weight: 600;
 }
 
 /* Responsive Documentation */
