@@ -18,7 +18,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video, Zap, Sparkles, Film, ShoppingCart, Megaphone, Share2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Player } from '@remotion/player';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
@@ -800,75 +800,303 @@ function ApiDocsView({ user }: { user: User | null }) {
   return (
     <div className="docs-layout">
       <section className="panel docs-panel">
-        <h2>
-          <ShieldCheck size={18} /> API Docs
-        </h2>
-        <p>Use Bearer API keys from Key Console. Copy the production URL directly into your app or automation flow.</p>
+        {/* Documentation Header */}
+        <div className="docs-header">
+          <div className="docs-header-icon">
+            <Zap size={24} />
+          </div>
+          <div className="docs-header-content">
+            <h1>API Documentation</h1>
+            <p>Powerful, scalable video generation API for developers. Create stunning videos, images, and video transformations in seconds using our cutting-edge AI models.</p>
+          </div>
+        </div>
+
+        {/* Quick Start Section */}
+        <div className="quickstart-section">
+          <h3>Quick Start in 3 Steps</h3>
+          <div className="quickstart-steps">
+            <div className="quickstart-step">
+              <div className="step-number">1</div>
+              <h4>Get API Key</h4>
+              <p>Create a free account and generate your Bearer token from the Key Console.</p>
+            </div>
+            <div className="quickstart-step">
+              <div className="step-number">2</div>
+              <h4>Send Request</h4>
+              <p>POST to /api/generate with your prompt and desired mode (video, image, or transform).</p>
+            </div>
+            <div className="quickstart-step">
+              <div className="step-number">3</div>
+              <h4>Poll Results</h4>
+              <p>Use /api/download with the returned job_id to check status and retrieve files.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Production Base URL */}
         <div className="base-url-card">
           <span>Production Base URL</span>
           <code>{API_BASE_URL}</code>
         </div>
+
+        {/* Tutorial Button */}
         <button type="button" className="tutorial-launch-card" onClick={() => setTutorialOpen(true)}>
-          Watch n8n API tutorial
+          <Video size={16} /> Watch n8n Integration Tutorial
         </button>
-        <div className="docs-grid">
-          <article className="panel-lite wide">
-            <h4>POST /api/generate</h4>
-            <p>Initiate a generation request. Supports Meta AI (default) and Veo AI.</p>
-            <div className="docs-params">
-              <strong>Body Parameters:</strong>
-              <ul>
-                <li><code>provider</code>: "meta" | "veo" (default: "meta")</li>
-                <li><code>mode</code>: "video" | "image" | "image_to_video" (Veo only supports "video")</li>
-                <li><code>aspect_ratio</code>: "landscape" | "portrait" (Veo only)</li>
-                <li><code>prompt</code>: Text description of the desired media.</li>
-                <li><code>image_url</code>: Required for "image_to_video" (Meta only).</li>
-              </ul>
+
+        {/* Endpoint 1: Generate */}
+        <div className="endpoint-card">
+          <div className="endpoint-header">
+            <div className="endpoint-method post">POST</div>
+            <div className="endpoint-path">
+              <h3>/api/generate</h3>
+              <p>Initiate a new video, image, or video transformation request</p>
             </div>
+          </div>
+
+          <div className="provider-badges">
+            <span className="provider-badge meta">
+              <Sparkles size={14} /> Meta AI
+            </span>
+            <span className="provider-badge veo">
+              <Sparkles size={14} /> Veo AI
+            </span>
+          </div>
+
+          {/* Parameters */}
+          <div className="params-section">
+            <h4>Request Body Parameters</h4>
+            <div className="param-list">
+              <div className="param-item">
+                <div>
+                  <div className="param-name">provider <span className="param-required">required</span></div>
+                  <div className="param-description">AI provider for generation</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">mode <span className="param-required">required</span></div>
+                  <div className="param-description">Generation type: video, image, or image_to_video (Veo supports video only)</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">prompt <span className="param-required">required</span></div>
+                  <div className="param-description">Detailed text description of desired output. Be specific for best results.</div>
+                </div>
+                <span className="param-type">string</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">aspect_ratio</div>
+                  <div className="param-description">Output aspect ratio (landscape or portrait). Veo AI only. Default: landscape</div>
+                </div>
+                <span className="param-type">enum</span>
+              </div>
+              <div className="param-item">
+                <div>
+                  <div className="param-name">image_url</div>
+                  <div className="param-description">Source image URL for image_to_video mode. Meta AI only, required when mode is image_to_video.</div>
+                </div>
+                <span className="param-type">string</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Codes */}
+          <div className="status-codes">
+            <h4>Response Status Codes</h4>
+            <div className="status-list">
+              <div className="status-item success">
+                <span className="status-code">200</span>
+                <span className="status-description">Successfully queued generation job</span>
+              </div>
+              <div className="status-item info">
+                <span className="status-code">400</span>
+                <span className="status-description">Invalid parameters or missing required fields</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">401</span>
+                <span className="status-description">Invalid or expired API key</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">429</span>
+                <span className="status-description">Rate limit exceeded</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Code Examples */}
+          <div className="code-examples-section">
+            <h4>Code Examples</h4>
             
-            <div className="docs-example-tabs">
-              <div>
-                <h5>Example: Veo AI (Cinematic Video)</h5>
-                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+            <div className="code-example">
+              <h5>Veo AI: Cinematic Video</h5>
+              <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "provider": "veo",
-    "prompt": "Drone shot of a cyberpunk city",
     "mode": "video",
-    "aspect_ratio": "landscape"
+    "aspect_ratio": "landscape",
+    "prompt": "A futuristic drone shot flying through a neon-lit cyberpunk cityscape at night"
   }'`}</pre>
-              </div>
-              <div>
-                <h5>Example: Meta AI (Image to Video)</h5>
-                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+            </div>
+
+            <div className="code-example">
+              <h5>Meta AI: Image to Video</h5>
+              <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "provider": "meta",
-    "prompt": "Make it rain in the city",
     "mode": "image_to_video",
-    "image_url": "https://example.com/city.jpg"
+    "image_url": "https://example.com/landscape.jpg",
+    "prompt": "The landscape comes alive with weather effects - rain starts falling, wind moves trees"
   }'`}</pre>
+            </div>
+          </div>
+        </div>
+
+        {/* Endpoint 2: Download */}
+        <div className="endpoint-card">
+          <div className="endpoint-header">
+            <div className="endpoint-method post">POST</div>
+            <div className="endpoint-path">
+              <h3>/api/download</h3>
+              <p>Poll generation status and retrieve completed media files</p>
+            </div>
+          </div>
+
+          {/* Parameters */}
+          <div className="params-section">
+            <h4>Request Body Parameters</h4>
+            <div className="param-list">
+              <div className="param-item">
+                <div>
+                  <div className="param-name">job_id <span className="param-required">required</span></div>
+                  <div className="param-description">Unique identifier returned from /api/generate endpoint. Use this to track your generation job.</div>
+                </div>
+                <span className="param-type">string</span>
               </div>
             </div>
-          </article>
+          </div>
 
-          <article className="panel-lite">
-            <h4>POST /api/download</h4>
-            <p>Poll results using the <code>job_id</code> returned by the generate endpoint.</p>
+          {/* Status Codes */}
+          <div className="status-codes">
+            <h4>Response Status Codes</h4>
+            <div className="status-list">
+              <div className="status-item success">
+                <span className="status-code">200</span>
+                <span className="status-description">Job status retrieved (queued, processing, completed, or failed)</span>
+              </div>
+              <div className="status-item info">
+                <span className="status-code">404</span>
+                <span className="status-description">Job ID not found</span>
+              </div>
+              <div className="status-item error">
+                <span className="status-code">401</span>
+                <span className="status-description">Invalid or expired API key</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Code Examples */}
+          <div className="code-examples-section">
+            <h4>Code Example</h4>
             <pre>{`curl -X POST ${API_BASE_URL}/api/download \\
-  -H "Authorization: Bearer YOUR_KEY" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{ "job_id": "YOUR_JOB_ID" }'`}</pre>
-            <h5>Expected Response:</h5>
-            <pre>{`{
+  -d '{
+    "job_id": "abc123def456"
+  }'
+
+# Response when completed:
+{
   "success": true,
   "status": "completed",
-  "videos": ["https://...mp4"],
-  "images": []
+  "videos": ["https://cdn.example.com/video_12345.mp4"],
+  "images": ["https://cdn.example.com/image_12345.png"]
 }`}</pre>
-          </article>
+          </div>
+        </div>
+
+        {/* Use Cases Section */}
+        <div className="usecases-section">
+          <h2>Real-World Use Cases</h2>
+          <div className="usecases-grid">
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <ShoppingCart size={18} />
+                </div>
+                <h4 className="usecase-title">E-Commerce</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate product showcase videos automatically for your catalog. Create engaging demonstrations that increase conversion rates and reduce return rates.</p>
+                <div className="usecase-example">{`{
+  "provider": "veo",
+  "mode": "video",
+  "prompt": "Product showcase video for luxury leather handbag"
+}`}</div>
+              </div>
+            </div>
+
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Film size={18} />
+                </div>
+                <h4 className="usecase-title">Entertainment</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Create cinematic trailers, scenes, and visual effects for film projects. Perfect for concept validation, storyboarding, and rapid prototyping of visual ideas.</p>
+                <div className="usecase-example">{`{
+  "provider": "veo",
+  "mode": "video",
+  "prompt": "Cinematic superhero action sequence with explosions"
+}`}</div>
+              </div>
+            </div>
+
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Megaphone size={18} />
+                </div>
+                <h4 className="usecase-title">Marketing</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate campaign videos at scale for social media and advertising. Create personalized content for different audience segments without expensive production teams.</p>
+                <div className="usecase-example">{`{
+  "provider": "meta",
+  "mode": "image_to_video",
+  "image_url": "https://example.com/brand-image.jpg",
+  "prompt": "Animate this brand image with dynamic movement"
+}`}</div>
+              </div>
+            </div>
+
+            <div className="usecase-card">
+              <div className="usecase-header">
+                <div className="usecase-icon">
+                  <Share2 size={18} />
+                </div>
+                <h4 className="usecase-title">Social Media</h4>
+              </div>
+              <div className="usecase-body">
+                <p className="usecase-description">Generate viral-worthy content tailored to platform-specific formats. Create short-form videos optimized for TikTok, Instagram Reels, and YouTube Shorts instantly.</p>
+                <div className="usecase-example">{`{
+  "provider": "meta",
+  "mode": "video",
+  "aspect_ratio": "portrait",
+  "prompt": "Trending dance challenge video"
+}`}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       <DocsPlaygroundCard user={user} />
@@ -1080,10 +1308,49 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
     }
   };
 
+  const applyPreset = (presetType: string) => {
+    switch (presetType) {
+      case 'veo-cinematic':
+        setProvider('veo');
+        setMode('video');
+        setAspectRatio('landscape');
+        setPrompt('Epic cinematic shot of a futuristic city skyline at sunset');
+        break;
+      case 'meta-image':
+        setProvider('meta');
+        setMode('image');
+        setPrompt('Generate a stunning landscape photograph');
+        break;
+      case 'meta-i2v':
+        setProvider('meta');
+        setMode('image_to_video');
+        setImageUrl('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800');
+        setPrompt('Animate this mountain landscape with dramatic weather and lighting changes');
+        break;
+    }
+  };
+
   return (
     <section className="panel docs-panel">
-      <h2>Docs Playground</h2>
-      <p>Manual technical tester for request body and raw JSON responses.</p>
+      <div className="docs-playground-header">
+        <h3>Interactive API Playground</h3>
+        <p>Test API requests in real-time. Configure parameters, send requests, and see live responses from our AI models.</p>
+      </div>
+
+      {/* Preset Buttons */}
+      <div className="preset-buttons">
+        <button className="preset-btn" onClick={() => applyPreset('veo-cinematic')}>
+          Veo Cinematic
+        </button>
+        <button className="preset-btn" onClick={() => applyPreset('meta-image')}>
+          Meta Image
+        </button>
+        <button className="preset-btn" onClick={() => applyPreset('meta-i2v')}>
+          Image-to-Video
+        </button>
+      </div>
+
+      {/* Request Controls */}
       <div className="docs-playground-controls">
         <div>
           <label>API Key</label>
@@ -1130,32 +1397,43 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         )}
         <div className="wide">
           <label>Prompt</label>
-          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+          <input value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Describe what you want to generate..." />
         </div>
         {mode === 'image_to_video' && (
           <div className="wide">
             <label>Image URL</label>
-            <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://..." />
+            <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://example.com/image.jpg" />
           </div>
         )}
       </div>
+
+      {/* Action Buttons */}
       <div className="playground-actions">
         <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
-          {loadingAction === 'generate' ? 'Running...' : 'POST /generate'}
+          {loadingAction === 'generate' ? 'Generating...' : 'POST /api/generate'}
         </button>
         <button
           className="secondary"
           onClick={runDownload}
           disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
         >
-          {loadingAction === 'download' ? 'Running...' : 'POST /download'}
+          {loadingAction === 'download' ? 'Downloading...' : 'POST /api/download'}
         </button>
       </div>
+
+      {/* Response Display */}
+      {jobId && (
+        <div className="response-status success">
+          <span className="status-dot"></span>
+          <span>Job ID: <strong>{jobId.slice(0, 12)}...</strong></span>
+        </div>
+      )}
+
       <div className="request-response-grid response-only-grid">
         <article className="code-panel">
           <div className="code-panel-head">
-            <span>Response</span>
-            <code>JSON</code>
+            <span>JSON Response</span>
+            <code>200</code>
           </div>
           <pre>{output}</pre>
         </article>
