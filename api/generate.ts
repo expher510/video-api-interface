@@ -122,9 +122,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     } else {
       await dispatchGithubWorkflow(env.githubRepo, env.githubToken, env.githubEventType, {
         prompt: workerPrompt,
-        original_prompt: prompt,
         mode,
-        aspect_ratio: veoAspectRatio, // Pass it to Meta too, just in case they support it in the future
+        // aspect_ratio removed — GitHub Dispatch allows max 10 properties; Meta bot doesn't use it
         image_url: imageUrl || undefined,
         webhook_url: webhookUrl,
         job_id: jobId,
