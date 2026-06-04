@@ -305,8 +305,7 @@ function AuthScreen() {
 function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onOpenKeyConsole: () => void }) {
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
-  const [provider, setProvider] = useState<'meta' | 'veo'>('meta');
-  const [aspectRatio, setAspectRatio] = useState<'landscape' | 'portrait'>('landscape');
+  const provider = 'meta';
   const [mode, setMode] = useState<GenerateMode>('video');
   const [imageUrl, setImageUrl] = useState('');
   const [jobId, setJobId] = useState('');
@@ -466,7 +465,6 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           provider,
           prompt,
           mode,
-          ...(provider === 'veo' ? { aspect_ratio: aspectRatio } : {}),
           ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
         }),
       });
@@ -619,30 +617,8 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           </button>
         </div>
 
-        <div className="studio-modes" style={{ marginBottom: '8px' }}>
-          <button
-            className={provider === 'meta' ? 'active' : ''}
-            onClick={() => setProvider('meta')}
-            type="button"
-          >
-            Meta AI
-          </button>
-          <button
-            className={provider === 'veo' ? 'active' : ''}
-            onClick={() => {
-              setProvider('veo');
-              if (mode !== 'video') setMode('video');
-            }}
-            type="button"
-          >
-            Veo AI
-          </button>
-        </div>
-
         <div className="studio-modes">
-          {(['image', 'video', 'image_to_video'] as GenerateMode[])
-            .filter((itemMode) => provider === 'meta' || itemMode === 'video')
-            .map((itemMode) => (
+          {(['image', 'video', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
             <button
               key={itemMode}
               className={mode === itemMode ? 'active' : ''}
@@ -653,25 +629,6 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
             </button>
           ))}
         </div>
-
-        {provider === 'veo' && (
-          <div className="studio-modes" style={{ marginTop: '8px' }}>
-            <button
-              className={aspectRatio === 'landscape' ? 'active' : ''}
-              onClick={() => setAspectRatio('landscape')}
-              type="button"
-            >
-              Landscape (16:9)
-            </button>
-            <button
-              className={aspectRatio === 'portrait' ? 'active' : ''}
-              onClick={() => setAspectRatio('portrait')}
-              type="button"
-            >
-              Portrait (9:16)
-            </button>
-          </div>
-        )}
 
         {mode === 'image_to_video' && (
           <div className="studio-image-url">
@@ -710,7 +667,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           {mediaItems.length > 0 && (
             <div className="media-grid">
               {mediaItems.map((item) => (
-                <article key={item.url} className={`media-item ${provider === 'veo' ? aspectRatio : 'landscape'}`}>
+                <article key={item.url} className="media-item landscape">
                   {item.kind === 'video' ? (
                     <video controls src={item.url} preload="metadata" />
                   ) : item.kind === 'image' ? (
@@ -723,11 +680,9 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
                   {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
                     <div className="card-loading">Regenerating...</div>
                   )}
-                  {provider === 'meta' && (
-                    <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
-                      Re-generate
-                    </button>
-                  )}
+                  <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
+                    Re-generate
+                  </button>
                 </article>
               ))}
             </div>
@@ -814,31 +769,18 @@ function ApiDocsView({ user }: { user: User | null }) {
         <div className="docs-grid">
           <article className="panel-lite wide">
             <h4>POST /api/generate</h4>
-            <p>Initiate a generation request. Supports Meta AI (default) and Veo AI.</p>
+            <p>Initiate a generation request. Supports Meta AI.</p>
             <div className="docs-params">
               <strong>Body Parameters:</strong>
               <ul>
-                <li><code>provider</code>: "meta" | "veo" (default: "meta")</li>
-                <li><code>mode</code>: "video" | "image" | "image_to_video" (Veo only supports "video")</li>
-                <li><code>aspect_ratio</code>: "landscape" | "portrait" (Veo only)</li>
+                <li><code>provider</code>: "meta" (default: "meta")</li>
+                <li><code>mode</code>: "video" | "image" | "image_to_video" (default: "video")</li>
                 <li><code>prompt</code>: Text description of the desired media.</li>
                 <li><code>image_url</code>: Required for "image_to_video" (Meta only).</li>
               </ul>
             </div>
             
             <div className="docs-example-tabs">
-              <div>
-                <h5>Example: Veo AI (Cinematic Video)</h5>
-                <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
-  -H "Authorization: Bearer YOUR_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "provider": "veo",
-    "prompt": "Drone shot of a cyberpunk city",
-    "mode": "video",
-    "aspect_ratio": "landscape"
-  }'`}</pre>
-              </div>
               <div>
                 <h5>Example: Meta AI (Image to Video)</h5>
                 <pre>{`curl -X POST ${API_BASE_URL}/api/generate \\
@@ -895,8 +837,7 @@ function N8nTutorialComposition() {
 Authorization: Bearer eg_xxx
 
 {
-  "provider": "veo",
-  "aspect_ratio": "landscape",
+  "provider": "meta",
   "prompt": "Create a cinematic teaser",
   "mode": "video"
 }`
@@ -991,8 +932,7 @@ function N8nTutorialModal({ onClose }: { onClose: () => void }) {
 }
 
 function DocsPlaygroundCard({ user }: { user: User | null }) {
-  const [provider, setProvider] = useState<'meta' | 'veo'>('meta');
-  const [aspectRatio, setAspectRatio] = useState<'landscape' | 'portrait'>('landscape');
+  const provider = 'meta';
   const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a fashion cinematic intro.');
   const [mode, setMode] = useState<GenerateMode>('video');
@@ -1046,7 +986,6 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
           provider,
           prompt,
           mode,
-          ...(provider === 'veo' ? { aspect_ratio: aspectRatio } : {}),
           ...(mode === 'image_to_video' ? { image_url: imageUrl.trim() } : {}),
         }),
       });
@@ -1101,33 +1040,13 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
           </select>
         </div>
         <div>
-          <label>Provider</label>
-          <select value={provider} onChange={(event) => {
-            const nextProvider = event.target.value as 'meta' | 'veo';
-            setProvider(nextProvider);
-            if (nextProvider === 'veo' && mode !== 'video') setMode('video');
-          }}>
-            <option value="meta">Meta AI</option>
-            <option value="veo">Veo AI</option>
-          </select>
-        </div>
-        <div>
           <label>Mode</label>
           <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)}>
             <option value="video">video</option>
-            {provider === 'meta' && <option value="image">image</option>}
-            {provider === 'meta' && <option value="image_to_video">image_to_video</option>}
+            <option value="image">image</option>
+            <option value="image_to_video">image_to_video</option>
           </select>
         </div>
-        {provider === 'veo' && (
-          <div>
-            <label>Aspect Ratio</label>
-            <select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value as 'landscape' | 'portrait')}>
-              <option value="landscape">Landscape</option>
-              <option value="portrait">Portrait</option>
-            </select>
-          </div>
-        )}
         <div className="wide">
           <label>Prompt</label>
           <input value={prompt} onChange={(event) => setPrompt(event.target.value)} />

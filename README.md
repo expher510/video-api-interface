@@ -42,29 +42,15 @@ Required variables are fully documented in `.env.example`.
 
 ## API Usage
 
-### 1) Generate content (Meta AI or Veo AI)
+### 1) Generate content (Meta AI)
 
 **Endpoint:** `POST /api/generate`
 
 **Body Parameters:**
-- `provider`: `"meta"` | `"veo"` (default: `"meta"`)
-- `mode`: `"video"` | `"image"` | `"image_to_video"` (Veo only supports `"video"`)
-- `aspect_ratio`: `"landscape"` | `"portrait"` (Veo only)
+- `provider`: `"meta"` (default: `"meta"`)
+- `mode`: `"video"` | `"image"` | `"image_to_video"` (default: `"video"`)
 - `prompt`: Text description.
 - `image_url`: Required for `"image_to_video"` (Meta only).
-
-**Example: Veo AI Video (Landscape)**
-```bash
-curl -X POST https://eg-autonomous.vercel.app/api/generate \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "provider": "veo",
-    "prompt": "Cyberpunk city drone shot",
-    "mode": "video",
-    "aspect_ratio": "landscape"
-  }'
-```
 
 **Example: Meta AI Image to Video**
 ```bash

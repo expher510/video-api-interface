@@ -8,7 +8,7 @@ import { parseJsonBody, requireMethod, sendJson, withErrorHandling, RequestLike,
 import { getRedisValue, setRedisValue } from './_lib/redis.js';
 
 type GenerateBody = {
-  provider?: 'meta' | 'veo';
+  provider?: 'meta' | 'supertonic';
   prompt?: string;
   body?: string;
   mode?: 'text' | 'image' | 'video' | 'image_to_video';
@@ -61,13 +61,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     const mode = resolveMode(requestBody.mode);
     const imageUrl = String(requestBody.image_url ?? '').trim();
     
-    // Map standard aspect ratio to Veo's expected format, defaulting to landscape
-    const veoAspectRatio = requestBody.aspect_ratio === 'portrait' 
-      ? 'VIDEO_ASPECT_RATIO_PORTRAIT' 
-      : 'VIDEO_ASPECT_RATIO_LANDSCAPE';
-
-    if (provider !== 'meta' && provider !== 'veo') {
-      throw new ApiError(400, 'invalid_provider', 'provider must be meta or veo.');
+    if (provider !== 'meta' && provider !== 'supertonic') {
+      throw new ApiError(400, 'invalid_provider', 'provider must be meta or supertonic.');
     }
 
     if (prompt.length < 3) {
@@ -93,8 +88,8 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
       'firebasePrivateKey',
       'redisRestUrl',
       'redisRestToken',
-      provider === 'veo' ? 'veoGithubRepo' : 'githubRepo',
-      provider === 'veo' ? 'veoGithubToken' : 'githubToken',
+      provider === 'supertonic' ? 'supertonicGithubRepo' : 'githubRepo',
+      provider === 'supertonic' ? 'supertonicGithubToken' : 'githubToken',
     ]);
 
     const keyInfo = await validateAndConsumeApiKey(env, apiKey);
@@ -112,10 +107,10 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     const baseUrl = env.pollBaseUrl || inferBaseUrl(req);
     const webhookUrl = baseUrl ? `${baseUrl}/api/received-video` : '/api/received-video';
 
-    if (provider === 'veo') {
-      await dispatchGithubWorkflow(env.veoGithubRepo, env.veoGithubToken, env.veoGithubEventType, {
-        prompt: prompt, // Veo expects the raw prompt
-        aspect_ratio: veoAspectRatio,
+    if (provider === 'supertonic') {
+      await dispatchGithubWorkflow(env.supertonicGithubRepo, env.supertonicGithubToken, env.supertonicGithubEventType, {
+        prompt: prompt,
+        voice: requestBody.body || 'M1', // Use body as voice if needed, or default
         webhook_url: webhookUrl,
         job_id: jobId,
       });
