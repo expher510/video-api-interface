@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import brandImage from './assets/eg-autonomous-brand.jpeg';
+import brandImage from './assets/freeflow-logo.jpg';
 import { auth, db } from './firebase';
 import {
   createUserWithEmailAndPassword,
@@ -18,7 +18,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Fingerprint, KeyRound, Play, ShieldCheck, Video, RefreshCw, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { Player } from '@remotion/player';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
@@ -146,6 +146,7 @@ export default function App() {
   const [section, setSection] = useState<AppSection>('generate');
   const [user, setUser] = useState<User | null>(null);
   const [loadingInit, setLoadingInit] = useState(true);
+  const [activeKey, setActiveKey] = useState<string>(() => window.localStorage.getItem('freeflow_active_api_key') || '');
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
@@ -170,9 +171,9 @@ export default function App() {
     <div className="app-shell">
       <aside className="left-nav">
         <div className="left-brand">
-          <img src={brandImage} alt="EG Autonomous" />
+          <img src={brandImage} alt="FREEFLOW" />
           <div>
-            <p>EG Autonomous</p>
+            <p>FREEFLOW</p>
             <span>Video API Platform</span>
           </div>
         </div>
@@ -203,10 +204,10 @@ export default function App() {
 
       <main className="main-stage">
         <div className={section === 'generate' ? 'stage-view' : 'stage-view hidden'}>
-          <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} />
+          <GenerateStudioView user={user} onOpenKeyConsole={() => setSection('keys')} activeKey={activeKey} />
         </div>
-        {section === 'docs' && <ApiDocsView user={user} />}
-        {section === 'keys' && (user ? <KeysView user={user} /> : <AuthScreen />)}
+        {section === 'docs' && <ApiDocsView user={user} activeKey={activeKey} />}
+        {section === 'keys' && (user ? <KeysView user={user} activeKey={activeKey} onSetActiveKey={(k) => { setActiveKey(k); window.localStorage.setItem('freeflow_active_api_key', k); }} /> : <AuthScreen />)}
       </main>
     </div>
   );
@@ -302,8 +303,7 @@ function AuthScreen() {
   );
 }
 
-function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onOpenKeyConsole: () => void }) {
-  const [apiKey, setApiKey] = useState('');
+function GenerateStudioView({ user, onOpenKeyConsole, activeKey }: { user: User | null; onOpenKeyConsole: () => void; activeKey: string }) {
   const [prompt, setPrompt] = useState('Create a cinematic drone shot of Cairo at sunrise.');
   const provider = 'meta';
   const [mode, setMode] = useState<GenerateMode>('video');
@@ -320,42 +320,10 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
   const [regenSourceUrl, setRegenSourceUrl] = useState('');
   const [regenPrompt, setRegenPrompt] = useState('Create a stronger cinematic variation.');
   const [activeRegenSourceUrl, setActiveRegenSourceUrl] = useState('');
-  const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
-  const [loadingKeys, setLoadingKeys] = useState(false);
   const [keyPromptOpen, setKeyPromptOpen] = useState(false);
 
   const mediaItems = useMemo(() => galleryItems, [galleryItems]);
   const latestImage = useMemo(() => mediaItems.find((item) => item.kind === 'image')?.url ?? '', [mediaItems]);
-
-  useEffect(() => {
-    if (!user) {
-      setUserKeys([]);
-      setApiKey('');
-      return;
-    }
-
-    setLoadingKeys(true);
-    const qWhere = query(collection(db, 'api_keys'), where('user_id', '==', user.uid));
-    const unsub = onSnapshot(
-      qWhere,
-      (snapshot) => {
-        const keys = snapshot.docs
-          .map((docItem) => coerceKeyDoc(docItem.id, docItem.data() as Record<string, unknown>))
-          .filter((item) => item.status === 'active')
-          .sort((a, b) => b.created_at - a.created_at);
-
-        setUserKeys(keys);
-        setApiKey((currentKey) => (keys.some((item) => item.key === currentKey) ? currentKey : keys[0]?.key ?? ''));
-        setLoadingKeys(false);
-      },
-      () => {
-        setUserKeys([]);
-        setLoadingKeys(false);
-      },
-    );
-
-    return unsub;
-  }, [user]);
 
   const parseState = (payload: unknown): string => {
     if (!payload || typeof payload !== 'object') return '';
@@ -385,7 +353,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey.trim()}`,
+            Authorization: `Bearer ${activeKey.trim()}`,
           },
           body: JSON.stringify({ job_id: nextJobId }),
         });
@@ -445,7 +413,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
   };
 
   const runGenerate = async () => {
-    if (!apiKey.trim()) {
+    if (!activeKey.trim()) {
       setKeyPromptOpen(true);
       return;
     }
@@ -459,7 +427,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
+          Authorization: `Bearer ${activeKey.trim()}`,
         },
         body: JSON.stringify({
           provider,
@@ -500,7 +468,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
+          Authorization: `Bearer ${activeKey.trim()}`,
         },
         body: JSON.stringify({ job_id: jobId.trim() }),
       });
@@ -526,7 +494,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
 
   const runRegenerate = async () => {
     if (!regenSourceUrl.trim() || !regenPrompt.trim()) return;
-    if (!apiKey.trim()) {
+    if (!activeKey.trim()) {
       setKeyPromptOpen(true);
       return;
     }
@@ -546,7 +514,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
+          Authorization: `Bearer ${activeKey.trim()}`,
         },
         body: JSON.stringify({
           prompt: regenPrompt.trim(),
@@ -585,19 +553,11 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
         <h1>YOURS TO CREATE</h1>
 
         <div className={`studio-bar ${barDocked ? 'studio-bar-docked' : ''}`}>
-          {userKeys.length > 0 ? (
-            <select value={apiKey} onChange={(event) => setApiKey(event.target.value)} className="key-input key-select">
-              {userKeys.map((item) => (
-                <option key={item.id} value={item.key}>
-                  {item.name || item.project || 'API Key'}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <button type="button" className="key-input key-select-empty" onClick={onOpenKeyConsole}>
-              {loadingKeys ? 'Loading keys...' : user ? 'Create API key' : 'Sign in for API key'}
-            </button>
-          )}
+          <select value={mode} onChange={(event) => setMode(event.target.value as GenerateMode)} className="key-input key-select">
+            <option value="image">Image Mode</option>
+            <option value="video">Video Mode</option>
+            <option value="image_to_video">Img to Video</option>
+          </select>
           <input
             type="text"
             value={prompt}
@@ -615,19 +575,6 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           >
             {loadingAction === 'generate' ? 'Generating...' : 'Generate'}
           </button>
-        </div>
-
-        <div className="studio-modes">
-          {(['image', 'video', 'image_to_video'] as GenerateMode[]).map((itemMode) => (
-            <button
-              key={itemMode}
-              className={mode === itemMode ? 'active' : ''}
-              onClick={() => setMode(itemMode)}
-              type="button"
-            >
-              {itemMode}
-            </button>
-          ))}
         </div>
 
         {mode === 'image_to_video' && (
@@ -667,9 +614,17 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
           {mediaItems.length > 0 && (
             <div className="media-grid">
               {mediaItems.map((item) => (
-                <article key={item.url} className="media-item landscape">
+                <article key={item.url} className="media-item">
                   {item.kind === 'video' ? (
-                    <video controls src={item.url} preload="metadata" />
+                    <video
+                      src={item.url}
+                      preload="metadata"
+                      loop
+                      muted
+                      playsInline
+                      onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+                      onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                    />
                   ) : item.kind === 'image' ? (
                     <img src={item.url} alt="Generated result" loading="lazy" />
                   ) : (
@@ -680,9 +635,14 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
                   {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
                     <div className="card-loading">Regenerating...</div>
                   )}
-                  <button type="button" className="regen-btn" onClick={() => openRegen(item.url)}>
-                    Re-generate
-                  </button>
+                  <div className="media-overlay">
+                    <button type="button" className="media-action-btn" onClick={() => openRegen(item.url)} title="Re-generate">
+                      <RefreshCw className="w-5 h-5" />
+                    </button>
+                    <button type="button" className="media-action-btn download-btn" onClick={() => window.open(item.url, '_blank')} title="Download">
+                      <Download className="w-5 h-5" />
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -737,7 +697,7 @@ function GenerateStudioView({ user, onOpenKeyConsole }: { user: User | null; onO
   );
 }
 
-function ApiDocsView({ user }: { user: User | null }) {
+function ApiDocsView({ user, activeKey }: { user: User | null; activeKey: string }) {
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
   useEffect(() => {
@@ -813,7 +773,7 @@ function ApiDocsView({ user }: { user: User | null }) {
           </article>
         </div>
       </section>
-      <DocsPlaygroundCard user={user} />
+      <DocsPlaygroundCard user={user} activeKey={activeKey} />
       {tutorialOpen && <N8nTutorialModal onClose={closeTutorial} />}
     </div>
   );
@@ -931,47 +891,14 @@ function N8nTutorialModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function DocsPlaygroundCard({ user }: { user: User | null }) {
+function DocsPlaygroundCard({ user, activeKey }: { user: User | null; activeKey: string }) {
   const provider = 'meta';
-  const [apiKey, setApiKey] = useState('');
   const [prompt, setPrompt] = useState('Create a fashion cinematic intro.');
   const [mode, setMode] = useState<GenerateMode>('video');
   const [imageUrl, setImageUrl] = useState('');
   const [jobId, setJobId] = useState('');
   const [loadingAction, setLoadingAction] = useState<'generate' | 'download' | null>(null);
   const [output, setOutput] = useState('Run a request to preview response JSON.');
-  const [userKeys, setUserKeys] = useState<ApiKeyDoc[]>([]);
-  const [loadingKeys, setLoadingKeys] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setUserKeys([]);
-      setApiKey('');
-      return;
-    }
-
-    setLoadingKeys(true);
-    const qWhere = query(collection(db, 'api_keys'), where('user_id', '==', user.uid));
-    const unsub = onSnapshot(
-      qWhere,
-      (snapshot) => {
-        const keys = snapshot.docs
-          .map((docItem) => coerceKeyDoc(docItem.id, docItem.data() as Record<string, unknown>))
-          .filter((item) => item.status === 'active')
-          .sort((a, b) => b.created_at - a.created_at);
-
-        setUserKeys(keys);
-        setApiKey((currentKey) => (keys.some((item) => item.key === currentKey) ? currentKey : keys[0]?.key ?? ''));
-        setLoadingKeys(false);
-      },
-      () => {
-        setUserKeys([]);
-        setLoadingKeys(false);
-      },
-    );
-
-    return unsub;
-  }, [user]);
 
   const runGenerate = async () => {
     setLoadingAction('generate');
@@ -980,7 +907,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
+          Authorization: `Bearer ${activeKey.trim()}`,
         },
         body: JSON.stringify({
           provider,
@@ -1006,7 +933,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey.trim()}`,
+          Authorization: `Bearer ${activeKey.trim()}`,
         },
         body: JSON.stringify({ job_id: jobId.trim() }),
       });
@@ -1025,19 +952,9 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
       <p>Manual technical tester for request body and raw JSON responses.</p>
       <div className="docs-playground-controls">
         <div>
-          <label>API Key</label>
-          <select value={apiKey} onChange={(event) => setApiKey(event.target.value)}>
-            {loadingKeys && <option value="">Loading keys...</option>}
-            {!loadingKeys && userKeys.length > 0 &&
-              userKeys.map((item) => (
-                <option key={item.id} value={item.key}>
-                  {item.name || item.project || 'API Key'}
-                </option>
-              ))}
-            {!loadingKeys && userKeys.length === 0 && (
-              <option value="">{user ? 'No active API keys' : 'Sign in to use saved keys'}</option>
-            )}
-          </select>
+          <div style={{ color: 'var(--text-soft)', marginBottom: '1rem' }}>
+            {activeKey ? `Active Key: ${maskApiKey(activeKey)}` : 'No active API key set.'}
+          </div>
         </div>
         <div>
           <label>Mode</label>
@@ -1059,13 +976,13 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
         )}
       </div>
       <div className="playground-actions">
-        <button onClick={runGenerate} disabled={loadingAction !== null || apiKey.trim().length < 10}>
+        <button onClick={runGenerate} disabled={loadingAction !== null || activeKey.trim().length < 10}>
           {loadingAction === 'generate' ? 'Running...' : 'POST /generate'}
         </button>
         <button
           className="secondary"
           onClick={runDownload}
-          disabled={loadingAction !== null || apiKey.trim().length < 10 || jobId.trim().length < 8}
+          disabled={loadingAction !== null || activeKey.trim().length < 10 || jobId.trim().length < 8}
         >
           {loadingAction === 'download' ? 'Running...' : 'POST /download'}
         </button>
@@ -1083,7 +1000,7 @@ function DocsPlaygroundCard({ user }: { user: User | null }) {
   );
 }
 
-function KeysView({ user }: { user: User }) {
+function KeysView({ user, activeKey, onSetActiveKey }: { user: User; activeKey: string; onSetActiveKey: (k: string) => void }) {
   const [keys, setKeys] = useState<ApiKeyDoc[]>([]);
   const [newKeyData, setNewKeyData] = useState<ApiKeyDoc | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -1176,7 +1093,7 @@ function KeysView({ user }: { user: User }) {
             </thead>
             <tbody>
               {keys.map((item) => (
-                <KeyRow key={item.id} item={item} />
+                <KeyRow key={item.id} item={item} isActive={item.key === activeKey} onActivate={() => onSetActiveKey(item.key)} />
               ))}
               {keys.length === 0 && (
                 <tr>
@@ -1314,7 +1231,7 @@ function CreateKeyForm({ user, onSuccess }: { user: User; onSuccess: (data: ApiK
   );
 }
 
-function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
+function KeyRow({ item, isActive, onActivate }: { item: ApiKeyDoc; isActive: boolean; onActivate: () => void; key?: React.Key }) {
   const [revealed, setRevealed] = useState(false);
   const [confirming, setConfirming] = useState<'revoke' | 'delete' | null>(null);
 
@@ -1405,6 +1322,11 @@ function KeyRow({ item }: { item: ApiKeyDoc; key?: React.Key }) {
           </div>
         ) : (
           <div className="row-actions">
+            {!isRevoked && (
+              <button onClick={onActivate} disabled={isActive} className={isActive ? 'active-key-btn' : ''}>
+                {isActive ? 'Active' : 'Activate'}
+              </button>
+            )}
             {!isRevoked ? (
               <button onClick={() => setConfirming('revoke')}>Revoke</button>
             ) : (
