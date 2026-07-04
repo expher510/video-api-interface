@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import brandImage from './assets/freeflow-logo.jpg';
 import { auth, db } from './firebase';
 import {
@@ -300,6 +300,54 @@ function AuthScreen() {
         {isLogin ? 'Need an account? Register' : 'Already have an account? Sign in'}
       </button>
     </section>
+  );
+}
+
+function VideoCard({
+  url,
+  isRegenerating,
+  onRegen,
+}: {
+  url: string;
+  isRegenerating: boolean;
+  onRegen: () => void;
+  key?: React.Key;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().catch(() => {});
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.pause();
+    v.currentTime = 0;
+  }, []);
+
+  return (
+    <article className="media-item" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <video
+        ref={videoRef}
+        src={url}
+        preload="auto"
+        loop
+        muted
+        playsInline
+      />
+      {isRegenerating && <div className="card-loading">Regenerating...</div>}
+      <div className="media-overlay">
+        <button type="button" className="media-action-btn" onClick={onRegen} title="Re-generate">
+          <RefreshCw className="w-5 h-5" />
+        </button>
+        <button type="button" className="media-action-btn download-btn" onClick={() => window.open(url, '_blank')} title="Download">
+          <Download className="w-5 h-5" />
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -613,38 +661,35 @@ function GenerateStudioView({ user, onOpenKeyConsole, activeKey }: { user: User 
 
           {mediaItems.length > 0 && (
             <div className="media-grid">
-              {mediaItems.map((item) => (
-                <article key={item.url} className="media-item">
-                  {item.kind === 'video' ? (
-                    <video
-                      src={item.url}
-                      preload="metadata"
-                      loop
-                      muted
-                      playsInline
-                      onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
-                      onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
-                    />
-                  ) : item.kind === 'image' ? (
+              {mediaItems.map((item) =>
+                item.kind === 'video' ? (
+                  <VideoCard
+                    key={item.url}
+                    url={item.url}
+                    isRegenerating={activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing')}
+                    onRegen={() => openRegen(item.url)}
+                  />
+                ) : item.kind === 'image' ? (
+                  <article key={item.url} className="media-item">
                     <img src={item.url} alt="Generated result" loading="lazy" />
-                  ) : (
-                    <a href={item.url} target="_blank" rel="noreferrer">
-                      Open media URL
-                    </a>
-                  )}
-                  {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
-                    <div className="card-loading">Regenerating...</div>
-                  )}
-                  <div className="media-overlay">
-                    <button type="button" className="media-action-btn" onClick={() => openRegen(item.url)} title="Re-generate">
-                      <RefreshCw className="w-5 h-5" />
-                    </button>
-                    <button type="button" className="media-action-btn download-btn" onClick={() => window.open(item.url, '_blank')} title="Download">
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    {activeRegenSourceUrl === item.url && (runStatus === 'queued' || runStatus === 'processing') && (
+                      <div className="card-loading">Regenerating...</div>
+                    )}
+                    <div className="media-overlay">
+                      <button type="button" className="media-action-btn" onClick={() => openRegen(item.url)} title="Re-generate">
+                        <RefreshCw className="w-5 h-5" />
+                      </button>
+                      <button type="button" className="media-action-btn download-btn" onClick={() => window.open(item.url, '_blank')} title="Download">
+                        <Download className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </article>
+                ) : (
+                  <article key={item.url} className="media-item">
+                    <a href={item.url} target="_blank" rel="noreferrer">Open media URL</a>
+                  </article>
+                )
+              )}
             </div>
           )}
         </div>
