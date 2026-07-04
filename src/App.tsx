@@ -672,8 +672,8 @@ function GenerateStudioView({ user, onOpenKeyConsole, activeKey }: { user: User 
         {keyPromptOpen && (
           <div className="regen-modal-backdrop" role="dialog" aria-modal="true">
             <div className="regen-modal">
-              <h3>Create API key first</h3>
-              <p className="modal-copy">You need an active API key before generating media.</p>
+              <h3>Activate an API Key</h3>
+              <p className="modal-copy">No active key selected. Go to Key Console and click <strong>Activate</strong> on any of your active keys to start generating media.</p>
               <div className="regen-actions">
                 <button type="button" className="secondary" onClick={() => setKeyPromptOpen(false)}>
                   Cancel
@@ -685,7 +685,7 @@ function GenerateStudioView({ user, onOpenKeyConsole, activeKey }: { user: User 
                     onOpenKeyConsole();
                   }}
                 >
-                  Create API Key
+                  Go to Key Console
                 </button>
               </div>
             </div>
